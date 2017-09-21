@@ -1,4 +1,4 @@
-# go-git-http-transfer [![Build Status](https://travis-ci.org/vvatanabe/go-git-http-transfer.svg?branch=master)](https://travis-ci.org/vvatanabe/go-git-http-transfer)
+# go-git-http-transfer [![Build Status](https://travis-ci.org/vvatanabe/go-git-http-transfer.svg?branch=master)](https://travis-ci.org/vvatanabe/go-git-http-transfer) [![Coverage Status](https://coveralls.io/repos/github/vvatanabe/go-git-http-transfer/badge.svg?branch=master)](https://coveralls.io/github/vvatanabe/go-git-http-transfer?branch=master)
 
 Implements Git HTTP Transport.
 
