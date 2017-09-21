@@ -32,7 +32,7 @@ $ git clone http://localhost:8080/example.git
 This package can be installed with the go get command:
 
 ``` zsh
-$ go get github.com/nulab/go-git-http-transfer
+$ go get github.com/vvatanabe/go-git-http-transfer
 ```
 
 ## Usage
