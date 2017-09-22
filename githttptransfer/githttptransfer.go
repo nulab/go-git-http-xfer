@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"regexp"
 	"strings"
 )
@@ -24,6 +25,7 @@ var (
 	getLooseObject    = regexp.MustCompile("(.*?)/objects/[0-9a-f]{2}/[0-9a-f]{38}$")
 	getPackFile       = regexp.MustCompile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.pack$")
 	getIdxFile        = regexp.MustCompile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.idx$")
+	getArchive        = regexp.MustCompile("(.*?)/archive/.*?\\.(zip|tar)$")
 )
 
 func New(gitRootPath string, gitBinPath string, uploadPack bool, receivePack bool) *GitHttpTransfer {
@@ -52,6 +54,7 @@ func New(gitRootPath string, gitBinPath string, uploadPack bool, receivePack boo
 	gsh.AddRoute(NewRoute(http.MethodGet, getLooseObject, gsh.getLooseObject))
 	gsh.AddRoute(NewRoute(http.MethodGet, getPackFile, gsh.getPackFile))
 	gsh.AddRoute(NewRoute(http.MethodGet, getIdxFile, gsh.getIdxFile))
+	gsh.AddRoute(NewRoute(http.MethodGet, getArchive, gsh.getArchive))
 	return gsh
 }
 
@@ -235,5 +238,46 @@ func (ght *GitHttpTransfer) sendFile(contentType string, ctx Context) error {
 	res.SetLastModified(fileInfo.ModTime().Format(http.TimeFormat))
 	http.ServeFile(res.Writer, req, fileInfo.AbsolutePath)
 
+	return nil
+}
+
+func (ght *GitHttpTransfer) getArchive(ctx Context) error {
+
+	res, repoPath, filePath := ctx.Response(), ctx.RepoPath(), ctx.FilePath()
+
+	repoName := strings.Split(path.Base(repoPath), ".")[0]
+	fileName := path.Base(filePath)
+	tree := fileName[0:strings.LastIndex(fileName, ".")]
+	ext := path.Ext(fileName)
+	format := strings.Replace(ext, ".", "", 1)
+
+	args := []string{"archive", "--format=" + format, "--prefix=" + repoName + "-" + tree + "/", tree}
+	cmd := ght.Git.GitCommand(repoPath, args...)
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		log.Printf("getArchive - cmd.StdoutPipe() error: %s", err.Error())
+		return err
+	}
+	defer stdout.Close()
+
+	if err := cmd.Start(); err != nil {
+		log.Printf("getArchive - cmd.Start() error: %s", err.Error())
+		return err
+	}
+
+	res.SetContentType("application/octet-stream")
+	res.Header().Add("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, fileName))
+	res.Header().Add("Content-Transfer-Encoding", "binary")
+	res.Writer.WriteHeader(200)
+
+	if _, err := res.Copy(stdout); err != nil {
+		log.Printf("getArchive - res.Copy(stdout) error: %s", err.Error())
+		return err
+	}
+	if err := cmd.Wait(); err != nil {
+		log.Printf("getArchive - cmd.Wait() error: %s", err.Error())
+		return err
+	}
 	return nil
 }
