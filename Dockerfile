@@ -20,7 +20,7 @@ MAINTAINER Yuichi Watanabe
 ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends curl libssl-dev openssl ca-certificates git \
+  && apt-get install -y --no-install-recommends curl wget unzip libssl-dev openssl ca-certificates git \
   && rm -fr /var/lib/apt/lists/*
 
 RUN go get github.com/axw/gocov/gocov && go get golang.org/x/tools/cmd/cover
