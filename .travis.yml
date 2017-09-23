@@ -10,5 +10,5 @@ before_script:
   - docker build -t git-http-transfer-build .
 
 script:
-  - docker run --rm -v $PWD:/go/src/github.com/vvatanabe/go-git-http-transfer git-http-transfer-build bash -c "go test -v -covermode=count -coverprofile=coverage.out ./githttptransfer"
+  - docker run --rm -v $PWD:/go/src/github.com/vvatanabe/go-git-http-transfer git-http-transfer-build bash -c "gotestcover -v -covermode=count -coverprofile=coverage.out ./..."
   - $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service travis-ci

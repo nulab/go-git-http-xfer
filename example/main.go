@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/vvatanabe/go-git-http-transfer/addon/archivehandler"
 	"github.com/vvatanabe/go-git-http-transfer/githttptransfer"
 )
 
@@ -26,6 +27,13 @@ func main() {
 				req.URL.RequestURI(), rp, fp)
 			return nil
 		},
+	))
+
+	// You can add some addon handler. (git archive)
+	ght.AddRoute(githttptransfer.NewRoute(
+		archivehandler.Method,
+		archivehandler.Pattern,
+		archivehandler.New(ght).HandlerFunc,
 	))
 
 	// You can add some middleware.

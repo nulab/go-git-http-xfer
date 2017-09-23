@@ -3,7 +3,7 @@
 # docker build -t git-http-transfer-build .
 #
 # [test]
-# docker run --rm -v $PWD:/go/src/github.com/vvatanabe/go-git-http-transfer git-http-transfer-build bash -c "go test -v -covermode=count -coverprofile=coverage.out ./githttptransfer"
+# docker run --rm -v $PWD:/go/src/github.com/vvatanabe/go-git-http-transfer git-http-transfer-build bash -c "gotestcover -v -covermode=count -coverprofile=coverage.out ./..."
 #
 # [attach]
 # docker run -it --rm -v $PWD:/go/src/github.com/vvatanabe/go-git-http-transfer -p 8080:8080 git-http-transfer-build bash
@@ -20,10 +20,10 @@ MAINTAINER Yuichi Watanabe
 ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends curl libssl-dev openssl ca-certificates git \
+  && apt-get install -y --no-install-recommends curl wget unzip libssl-dev openssl ca-certificates git \
   && rm -fr /var/lib/apt/lists/*
 
-RUN go get github.com/axw/gocov/gocov && go get golang.org/x/tools/cmd/cover
+RUN go get github.com/pierrre/gotestcover
 
 ENV TZ Asia/Tokyo
 
