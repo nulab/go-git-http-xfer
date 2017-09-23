@@ -92,7 +92,23 @@ func Logger(next http.Handler) http.Handler {
 	})
 }
 ```
+You can add some addon handler. (git archive)
+``` go
+import (
+	"github.com/vvatanabe/go-git-http-transfer/addon/archivehandler"
+)
 
+func main() {
+	ght := githttptransfer.New("/data/git", "/usr/bin/git", true, true)
+	ght.AddRoute(githttptransfer.NewRoute(
+		archivehandler.Method,
+		archivehandler.Pattern,
+		archivehandler.New(ght).HandlerFunc,
+	))
+	err := http.ListenAndServe(":8080", ght)
+}
+
+```
 
 ## Reference
 
