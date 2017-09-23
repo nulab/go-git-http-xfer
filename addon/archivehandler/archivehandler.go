@@ -39,27 +39,26 @@ func (ght *archiveHandler) HandlerFunc(ctx githttptransfer.Context) error {
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		log.Printf("getArchive - cmd.StdoutPipe() error: %s", err.Error())
+		log.Printf("archiveHandler - git archive stdout(%s). error: %s", cmd.Args, err.Error())
 		return err
 	}
 	defer stdout.Close()
 
 	if err := cmd.Start(); err != nil {
-		log.Printf("getArchive - cmd.Start() error: %s", err.Error())
+		log.Printf("archiveHandler - git archive start(%s). error: %s", cmd.Args, err.Error())
 		return err
 	}
 
 	res.SetContentType("application/octet-stream")
 	res.Header().Add("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, fileName))
 	res.Header().Add("Content-Transfer-Encoding", "binary")
-	res.Writer.WriteHeader(200)
 
 	if _, err := res.Copy(stdout); err != nil {
-		log.Printf("getArchive - res.Copy(stdout) error: %s", err.Error())
+		log.Printf("archiveHandler - copy stdout to response(%s). error: %s", cmd.Args, err.Error())
 		return err
 	}
 	if err := cmd.Wait(); err != nil {
-		log.Printf("getArchive - cmd.Wait() error: %s", err.Error())
+		log.Printf("archiveHandler - git archive wait(%s). error: %s", cmd.Args, err.Error())
 		return err
 	}
 	return nil
