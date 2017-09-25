@@ -10,9 +10,16 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"os"
 )
 
-func Test_it_should_be_able_to_clone_and_push_and_fetch_log(t *testing.T) {
+
+const (
+	gitRootPath = "/data/git"
+	gitBinPath = "/usr/bin/git"
+)
+
+func Test_End_To_End_clone_and_push_and_fetch_and_log(t *testing.T) {
 
 	_, err := exec.LookPath("git")
 	if err != nil {
@@ -20,58 +27,65 @@ func Test_it_should_be_able_to_clone_and_push_and_fetch_log(t *testing.T) {
 		return
 	}
 
-	gsh := New("/data/git", "/usr/bin/git", true, true)
+	ght := New(gitRootPath, gitBinPath, true, true)
 
-	ts := httptest.NewServer(gsh)
-	if ts == nil {
-		t.Error("test server is nil.")
-	}
+	ts := httptest.NewServer(ght)
 	defer ts.Close()
 
-	remoteUrl := ts.URL + "/test.git"
-	tempDir, _ := ioutil.TempDir("", "gitsmarthttp")
 
-	dirA := "test_a"
-	dirB := "test_b"
-	destDirA := path.Join(tempDir, dirA)
-	destDirB := path.Join(tempDir, dirB)
+	repoName := "e2e_test.git"
+	absRepoPath := ght.Git.GetAbsolutePath(repoName)
+	os.Mkdir(absRepoPath, os.ModeDir)
 
-	cloneCmdA := exec.Command("git", "clone", remoteUrl, destDirA)
+	initCmd := exec.Command("git", "init", "--bare", "--shared")
+	initCmd.Dir = absRepoPath
+	testCommand(t, initCmd)
+
+
+	remoteRepoUrl := ts.URL + "/" + repoName
+	tempDir, _ := ioutil.TempDir("", "githttptransfer")
+
+	localDirNameA := "test_a"
+	localDirNameB := "test_b"
+	pathOfDestLocalDirA := path.Join(tempDir, localDirNameA)
+	pathOfDestLocalDirB := path.Join(tempDir, localDirNameB)
+
+	cloneCmdA := exec.Command("git", "clone", remoteRepoUrl, pathOfDestLocalDirA)
 	testCommand(t, cloneCmdA)
 
-	cloneCmdB := exec.Command("git", "clone", remoteUrl, destDirB)
+	cloneCmdB := exec.Command("git", "clone", remoteRepoUrl, pathOfDestLocalDirB)
 	testCommand(t, cloneCmdB)
 
 	setUserNameToGitConfigCmd := exec.Command("git", "config", "--global", "user.name", "yuichi.watanabe")
-	setUserNameToGitConfigCmd.Dir = destDirA
+	setUserNameToGitConfigCmd.Dir = pathOfDestLocalDirA
 	testCommand(t, setUserNameToGitConfigCmd)
 
-	setUserEmailToGitConfigCmd := gsh.Git.GitCommand("git", "config", "--global", "user.email", "yuichi.watanabe.ja@gmail.com")
-	setUserEmailToGitConfigCmd.Dir = destDirA
+	setUserEmailToGitConfigCmd := exec.Command("git", "config", "--global", "user.email", "yuichi.watanabe.ja@gmail.com")
+	setUserEmailToGitConfigCmd.Dir = pathOfDestLocalDirA
 	testCommand(t, setUserEmailToGitConfigCmd)
 
 	touchCmd := exec.Command("touch", "README.txt")
-	touchCmd.Dir = destDirA
+	touchCmd.Dir = pathOfDestLocalDirA
 	testCommand(t, touchCmd)
 
 	addCmd := exec.Command("git", "add", "README.txt")
-	addCmd.Dir = destDirA
+	addCmd.Dir = pathOfDestLocalDirA
 	testCommand(t, addCmd)
 
 	commitCmd := exec.Command("git", "commit", "-m", "first commit")
-	commitCmd.Dir = destDirA
+	commitCmd.Dir = pathOfDestLocalDirA
 	testCommand(t, commitCmd)
 
 	pushCmd := exec.Command("git", "push", "-u", "origin", "master")
-	pushCmd.Dir = destDirA
+	pushCmd.Dir = pathOfDestLocalDirA
 	testCommand(t, pushCmd)
 
 	fetchCmd := exec.Command("git", "fetch")
-	fetchCmd.Dir = destDirB
+	fetchCmd.Dir = pathOfDestLocalDirB
 	testCommand(t, fetchCmd)
 
 	logCmd := exec.Command("git", "log", "--oneline", "origin/master", "-1")
-	logCmd.Dir = destDirB
+	logCmd.Dir = pathOfDestLocalDirB
 	testCommand(t, logCmd)
 
 }
@@ -91,7 +105,7 @@ func Test_it_should_return_200_if_request_to_info_refs(t *testing.T) {
 	}
 	defer ts.Close()
 
-	res, err := http.Get(ts.URL + "/test.git/info/refs")
+	res, err := http.Get(ts.URL + "/e2e_test.git/info/refs")
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
 	}
@@ -125,7 +139,7 @@ func Test_it_should_return_200_if_request_to_HEAD(t *testing.T) {
 	}
 	defer ts.Close()
 
-	res, err := http.Get(ts.URL + "/test.git/HEAD")
+	res, err := http.Get(ts.URL + "/e2e_test.git/HEAD")
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
 	}
@@ -159,7 +173,7 @@ func Test_it_should_return_200_if_request_to_loose_objects(t *testing.T) {
 	}
 	defer ts.Close()
 
-	res, err := http.Get(ts.URL + "/test.git/info/refs")
+	res, err := http.Get(ts.URL + "/e2e_test.git/info/refs")
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
 	}
@@ -184,7 +198,7 @@ func Test_it_should_return_200_if_request_to_loose_objects(t *testing.T) {
 		return
 	}
 
-	res, err = http.Get(ts.URL + "/test.git/objects/" + m[1] + "/" + m[2])
+	res, err = http.Get(ts.URL + "/e2e_test.git/objects/" + m[1] + "/" + m[2])
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
 	}
@@ -204,7 +218,7 @@ func Test_it_should_return_200_if_request_to_info_packs(t *testing.T) {
 
 	gsh := New("/data/git", "/usr/bin/git", true, false)
 
-	gcCmd := gsh.Git.GitCommand("test.git", []string{"gc"}...)
+	gcCmd := gsh.Git.GitCommand("e2e_test.git", []string{"gc"}...)
 	testCommand(t, gcCmd)
 
 	ts := httptest.NewServer(gsh)
@@ -213,7 +227,7 @@ func Test_it_should_return_200_if_request_to_info_packs(t *testing.T) {
 	}
 	defer ts.Close()
 
-	res, err := http.Get(ts.URL + "/test.git/objects/info/packs")
+	res, err := http.Get(ts.URL + "/e2e_test.git/objects/info/packs")
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
 	}
@@ -238,7 +252,7 @@ func Test_it_should_return_200_if_request_to_info_packs(t *testing.T) {
 		return
 	}
 
-	url := ts.URL + "/test.git/objects/pack/" + m[1]
+	url := ts.URL + "/e2e_test.git/objects/pack/" + m[1]
 	res, err = http.Get(url)
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
@@ -257,7 +271,7 @@ func Test_it_should_return_200_if_request_to_info_packs(t *testing.T) {
 		t.Errorf("StatusCode is not 200. url: %s, result: %d", url, res.StatusCode)
 	}
 
-	res, err = http.Get(ts.URL + "/test.git/objects/info/http-alternates")
+	res, err = http.Get(ts.URL + "/e2e_test.git/objects/info/http-alternates")
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
 	}
