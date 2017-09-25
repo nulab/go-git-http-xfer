@@ -85,8 +85,7 @@ func Test_it_should_download_archive_repository(t *testing.T) {
 }
 
 func testCommand(t *testing.T, cmd *exec.Cmd) {
-	out, err := cmd.CombinedOutput()
-	t.Logf("%s: %s", cmd.Args, string(out))
+	_, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Errorf("testCommand error: %s", err.Error())
 	}
