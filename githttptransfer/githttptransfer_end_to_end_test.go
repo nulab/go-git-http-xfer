@@ -17,6 +17,7 @@ import (
 const (
 	gitRootPath = "/data/git"
 	gitBinPath = "/usr/bin/git"
+	repoName = "e2e_test.git"
 )
 
 func Test_End_To_End_clone_and_push_and_fetch_and_log(t *testing.T) {
@@ -33,7 +34,6 @@ func Test_End_To_End_clone_and_push_and_fetch_and_log(t *testing.T) {
 	defer ts.Close()
 
 
-	repoName := "e2e_test.git"
 	absRepoPath := ght.Git.GetAbsolutePath(repoName)
 	os.Mkdir(absRepoPath, os.ModeDir)
 
@@ -90,37 +90,36 @@ func Test_End_To_End_clone_and_push_and_fetch_and_log(t *testing.T) {
 
 }
 
-func Test_it_should_return_200_if_request_to_info_refs(t *testing.T) {
+func Test_End_To_End_get_info_refs(t *testing.T) {
 
 	_, err := exec.LookPath("git")
 	if err != nil {
-		log.Println("git is not found. so skip test.")
+		t.Log("git is not found. so skip git e2e test.")
+		return
 	}
 
-	gsh := New("/data/git", "/usr/bin/git", true, false)
+	gsh := New(gitRootPath, gitBinPath, true, true)
 
 	ts := httptest.NewServer(gsh)
-	if ts == nil {
-		t.Error("test server is nil.")
-	}
 	defer ts.Close()
 
-	res, err := http.Get(ts.URL + "/e2e_test.git/info/refs")
+	res, err := http.Get(ts.URL + "/" + repoName + "/info/refs")
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
+		return
 	}
 
 	if res.StatusCode != 200 {
 		t.Errorf("StatusCode is not 200. result: %d", res.StatusCode)
+		return
 	}
 
-	bodyBytes, err := ioutil.ReadAll(res.Body)
+	_, err = ioutil.ReadAll(res.Body)
 	res.Body.Close()
 	if err != nil {
 		t.Errorf("ioutil.ReadAll error: %s", err.Error())
+		return
 	}
-
-	log.Printf("response body: %s", string(bodyBytes))
 
 }
 
