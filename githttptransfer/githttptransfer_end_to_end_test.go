@@ -12,23 +12,19 @@ import (
 	"strings"
 )
 
-type EndToEndTest struct {
-	gitRootPath string
-	gitBinPath string
-	repoName string
-
-	ght *GitHttpTransfer
-	ts *httptest.Server
-
-	absRepoPath string
-
-	remoteRepoUrl string
-
-	tempDir string
+type EndToEndTestParams struct {
+	gitRootPath    string
+	gitBinPath     string
+	repoName       string
+	ght            *GitHttpTransfer
+	ts             *httptest.Server
+	absRepoPath    string
+	remoteRepoUrl  string
+	workingDirPath string // Ex: output destination of git clone.
 }
 
 var (
-	endToEndTest = new(EndToEndTest)
+	endToEndTestParams *EndToEndTestParams
 )
 
 func setupEndToEndTest(t *testing.T) error {
@@ -39,91 +35,114 @@ func setupEndToEndTest(t *testing.T) error {
 		return err
 	}
 
-	endToEndTest.gitRootPath = "/data/git"
-	endToEndTest.gitBinPath = "/usr/bin/git"
-	endToEndTest.repoName = "e2e_test.git"
+	endToEndTestParams = new(EndToEndTestParams)
 
-	endToEndTest.ght = New(endToEndTest.gitRootPath, endToEndTest.gitBinPath, true, true)
-	endToEndTest.ts = httptest.NewServer(endToEndTest.ght)
+	endToEndTestParams.gitRootPath = "/data/git"
+	endToEndTestParams.gitBinPath = "/usr/bin/git"
+	endToEndTestParams.repoName = "e2e_test.git"
 
-	endToEndTest.absRepoPath = endToEndTest.ght.Git.GetAbsolutePath(endToEndTest.repoName)
-	os.Mkdir(endToEndTest.absRepoPath, os.ModeDir)
+	endToEndTestParams.ght = New(endToEndTestParams.gitRootPath, endToEndTestParams.gitBinPath, true, true)
+	endToEndTestParams.ts = httptest.NewServer(endToEndTestParams.ght)
 
-	initCmd := exec.Command("git", "init", "--bare", "--shared")
-	initCmd.Dir = endToEndTest.absRepoPath
-	testCommand(t, initCmd)
+	endToEndTestParams.absRepoPath = endToEndTestParams.ght.Git.GetAbsolutePath(endToEndTestParams.repoName)
+	os.Mkdir(endToEndTestParams.absRepoPath, os.ModeDir)
 
-	endToEndTest.remoteRepoUrl = endToEndTest.ts.URL + "/" + endToEndTest.repoName
+
+	if _, err := execCmd(endToEndTestParams.absRepoPath, "git", "init", "--bare", "--shared"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return err
+	}
+
+	endToEndTestParams.remoteRepoUrl = endToEndTestParams.ts.URL + "/" + endToEndTestParams.repoName
 	tempDir, _ := ioutil.TempDir("", "githttptransfer")
-	endToEndTest.tempDir = tempDir
+	endToEndTestParams.workingDirPath = tempDir
 	return nil
 }
 
 func teardownEndToEndTest() {
-	endToEndTest.ts.Close()
-	endToEndTest = new(EndToEndTest)
+	endToEndTestParams.ts.Close()
 }
 
-func Test_End_To_End_clone_and_push_and_fetch_and_log(t *testing.T) {
+func execCmd(dir string, name string, arg ...string) ([]byte, error) {
+	c := exec.Command(name, arg...)
+	c.Dir = dir
+	return c.CombinedOutput()
+}
+
+func Test_End_To_End_it_should_succeed_clone_and_push_and_fetch_and_log(t *testing.T) {
 
 	if err := setupEndToEndTest(t); err != nil {
 		return
 	}
 	defer teardownEndToEndTest()
 
-	localDirNameA := "test_a"
-	localDirNameB := "test_b"
-	pathOfDestLocalDirA := path.Join(endToEndTest.tempDir, localDirNameA)
-	pathOfDestLocalDirB := path.Join(endToEndTest.tempDir, localDirNameB)
+	remoteRepoUrl := endToEndTestParams.remoteRepoUrl
 
-	cloneCmdA := exec.Command("git", "clone", endToEndTest.remoteRepoUrl, pathOfDestLocalDirA)
-	testCommand(t, cloneCmdA)
+	destDirNameA := "test_a"
+	destDirNameB := "test_b"
+	destDirPathA := path.Join(endToEndTestParams.workingDirPath, destDirNameA)
+	destDirPathB := path.Join(endToEndTestParams.workingDirPath, destDirNameB)
 
-	cloneCmdB := exec.Command("git", "clone", endToEndTest.remoteRepoUrl, pathOfDestLocalDirB)
-	testCommand(t, cloneCmdB)
+	if _, err := execCmd("", "git", "clone", remoteRepoUrl, destDirPathA); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
 
-	setUserNameToGitConfigCmd := exec.Command("git", "config", "--global", "user.name", "yuichi.watanabe")
-	setUserNameToGitConfigCmd.Dir = pathOfDestLocalDirA
-	testCommand(t, setUserNameToGitConfigCmd)
+	if _, err := execCmd("", "git", "clone", remoteRepoUrl, destDirPathB); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
 
-	setUserEmailToGitConfigCmd := exec.Command("git", "config", "--global", "user.email", "yuichi.watanabe.ja@gmail.com")
-	setUserEmailToGitConfigCmd.Dir = pathOfDestLocalDirA
-	testCommand(t, setUserEmailToGitConfigCmd)
+	if _, err := execCmd(destDirPathA, "git", "config", "--global", "user.name", "John Smith"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
 
-	touchCmd := exec.Command("touch", "README.txt")
-	touchCmd.Dir = pathOfDestLocalDirA
-	testCommand(t, touchCmd)
+	if _, err := execCmd(destDirPathA, "git", "config", "--global", "user.email", "js@example.com"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
 
-	addCmd := exec.Command("git", "add", "README.txt")
-	addCmd.Dir = pathOfDestLocalDirA
-	testCommand(t, addCmd)
+	if _, err := execCmd(destDirPathA, "touch", "README.txt"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
 
-	commitCmd := exec.Command("git", "commit", "-m", "first commit")
-	commitCmd.Dir = pathOfDestLocalDirA
-	testCommand(t, commitCmd)
+	if _, err := execCmd(destDirPathA, "git", "add", "README.txt"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
 
-	pushCmd := exec.Command("git", "push", "-u", "origin", "master")
-	pushCmd.Dir = pathOfDestLocalDirA
-	testCommand(t, pushCmd)
+	if _, err := execCmd(destDirPathA, "git", "commit", "-m", "first commit"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
 
-	fetchCmd := exec.Command("git", "fetch")
-	fetchCmd.Dir = pathOfDestLocalDirB
-	testCommand(t, fetchCmd)
+	if _, err := execCmd(destDirPathA, "git", "push", "-u", "origin", "master"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
 
-	logCmd := exec.Command("git", "log", "--oneline", "origin/master", "-1")
-	logCmd.Dir = pathOfDestLocalDirB
-	testCommand(t, logCmd)
+	if _, err := execCmd(destDirPathB, "git", "fetch"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
+
+	if _, err := execCmd(destDirPathB, "git", "log", "--oneline", "origin/master", "-1"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
 
 }
 
-func Test_End_To_End_get_info_refs(t *testing.T) {
+func Test_End_To_End_it_should_succeed_request_to_get_info_refs(t *testing.T) {
 
 	if err := setupEndToEndTest(t); err != nil {
 		return
 	}
 	defer teardownEndToEndTest()
 
-	res, err := http.Get(endToEndTest.remoteRepoUrl + "/info/refs")
+	res, err := http.Get(endToEndTestParams.remoteRepoUrl + "/info/refs")
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
 		return
@@ -143,49 +162,55 @@ func Test_End_To_End_get_info_refs(t *testing.T) {
 
 }
 
-func Test_End_To_End_get_HEAD(t *testing.T) {
+func Test_End_To_End_it_should_succeed_request_to_get_HEAD(t *testing.T) {
 
 	if err := setupEndToEndTest(t); err != nil {
 		return
 	}
 	defer teardownEndToEndTest()
 
-	res, err := http.Get(endToEndTest.remoteRepoUrl + "/HEAD")
+	res, err := http.Get(endToEndTestParams.remoteRepoUrl + "/HEAD")
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
+		return
 	}
 
 	if res.StatusCode != 200 {
 		t.Errorf("StatusCode is not 200. result: %d", res.StatusCode)
+		return
 	}
 
 	_, err = ioutil.ReadAll(res.Body)
 	res.Body.Close()
 	if err != nil {
 		t.Errorf("ioutil.ReadAll error: %s", err.Error())
+		return
 	}
 }
 
-func Test_End_To_End_loose_objects(t *testing.T) {
+func Test_End_To_End_it_should_succeed_request_to_loose_objects(t *testing.T) {
 
 	if err := setupEndToEndTest(t); err != nil {
 		return
 	}
 	defer teardownEndToEndTest()
 
-	res, err := http.Get(endToEndTest.remoteRepoUrl + "/info/refs")
+	res, err := http.Get(endToEndTestParams.remoteRepoUrl + "/info/refs")
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
+		return
 	}
 
 	if res.StatusCode != 200 {
 		t.Errorf("StatusCode is not 200. result: %d", res.StatusCode)
+		return
 	}
 
 	bodyBytes, err := ioutil.ReadAll(res.Body)
 	res.Body.Close()
 	if err != nil {
 		t.Errorf("ioutil.ReadAll error: %s", err.Error())
+		return
 	}
 
 	bodyString := string(bodyBytes)
@@ -197,35 +222,40 @@ func Test_End_To_End_loose_objects(t *testing.T) {
 		return
 	}
 
-	res, err = http.Get(endToEndTest.remoteRepoUrl + "/objects/" + m[1] + "/" + m[2])
+	res, err = http.Get(endToEndTestParams.remoteRepoUrl + "/objects/" + m[1] + "/" + m[2])
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
+		return
 	}
 
 	if res.StatusCode != 200 {
 		t.Errorf("StatusCode is not 200. result: %d", res.StatusCode)
+		return
 	}
 
 }
 
-func Test_End_To_End_get_info_packs(t *testing.T) {
+func Test_End_To_End_it_should_succeed_request_to_get_info_packs(t *testing.T) {
 
 	if err := setupEndToEndTest(t); err != nil {
 		return
 	}
 	defer teardownEndToEndTest()
 
-	gcCmd := exec.Command("git", "gc")
-	gcCmd.Dir = endToEndTest.absRepoPath
-	testCommand(t, gcCmd)
+	if _, err := execCmd(endToEndTestParams.absRepoPath, "git", "gc"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
 
-	res, err := http.Get(endToEndTest.remoteRepoUrl + "/objects/info/packs")
+	res, err := http.Get(endToEndTestParams.remoteRepoUrl + "/objects/info/packs")
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
+		return
 	}
 
 	if res.StatusCode != 200 {
-		t.Errorf("StatusCode is not 200. result: %d, url: %s", res.StatusCode, res.Request.Host + res.Request.URL.RequestURI())
+		url := res.Request.Host + res.Request.URL.RequestURI()
+		t.Errorf("StatusCode is not 200. result: %d, url: %s", res.StatusCode, url)
 		return
 	}
 
@@ -245,39 +275,39 @@ func Test_End_To_End_get_info_packs(t *testing.T) {
 		return
 	}
 
-	infoPacksUrl := endToEndTest.remoteRepoUrl + "/objects/pack/" + m[1]
+	infoPacksUrl := endToEndTestParams.remoteRepoUrl + "/objects/pack/" + m[1]
 	res, err = http.Get(infoPacksUrl)
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
+		return
 	}
 
 	if res.StatusCode != 200 {
 		t.Errorf("StatusCode is not 200. url: %s, result: %d", infoPacksUrl, res.StatusCode)
+		return
 	}
 
 	res, err = http.Get(strings.Replace(infoPacksUrl, ".pack", ".idx", 1))
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
+		return
 	}
 
 	if res.StatusCode != 200 {
 		t.Errorf("StatusCode is not 200. url: %s, result: %d", infoPacksUrl, res.StatusCode)
+		return
 	}
 
-	res, err = http.Get(endToEndTest.ts.URL + "/objects/info/http-alternates")
+	res, err = http.Get(endToEndTestParams.ts.URL + "/objects/info/http-alternates")
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
+		return
 	}
 
 	if res.StatusCode != 404 {
 		t.Errorf("StatusCode is not 404. result: %d", res.StatusCode)
+		return
 	}
 
 }
 
-func testCommand(t *testing.T, cmd *exec.Cmd) {
-	_, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Errorf("testCommand error: %s", err.Error())
-	}
-}
