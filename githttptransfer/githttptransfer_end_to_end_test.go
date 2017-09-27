@@ -16,11 +16,11 @@ type EndToEndTestParams struct {
 	gitRootPath    string
 	gitBinPath     string
 	repoName       string
-	ght            *GitHttpTransfer
-	ts             *httptest.Server
 	absRepoPath    string
 	remoteRepoUrl  string
 	workingDirPath string // Ex: output destination of git clone.
+	ght            *GitHttpTransfer
+	ts             *httptest.Server
 }
 
 var (

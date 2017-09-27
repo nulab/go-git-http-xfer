@@ -36,57 +36,66 @@ func Test_it_should_download_archive_repository(t *testing.T) {
 	absRepoPath := ght.Git.GetAbsolutePath(repoName)
 	os.Mkdir(absRepoPath, os.ModeDir)
 
-	initCmd := exec.Command("git", "init", "--bare", "--shared")
-	initCmd.Dir = absRepoPath
-	testCommand(t, initCmd)
+	if _, err := execCmd(absRepoPath, "git", "init", "--bare", "--shared"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
 
-	remoteUrl := ts.URL + "/" + repoName
+	remoteRepoUrl := ts.URL + "/" + repoName
 
 	tempDir, _ := ioutil.TempDir("", "gitsmarthttp")
 	dir := "archive_test"
 	destDir := path.Join(tempDir, dir)
 
-	cloneCmd := exec.Command("git", "clone", remoteUrl, destDir)
-	testCommand(t, cloneCmd)
+	if _, err := execCmd("", "git", "clone", remoteRepoUrl, destDir); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
 
-	setUserNameToGitConfigCmd := exec.Command("git", "config", "--global", "user.name", "yuichi.watanabe")
-	setUserNameToGitConfigCmd.Dir = destDir
-	testCommand(t, setUserNameToGitConfigCmd)
+	if _, err := execCmd(destDir, "git", "config", "--global", "user.name", "John Smith"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
 
-	setUserEmailToGitConfigCmd := exec.Command("git", "config", "--global", "user.email", "yuichi.watanabe.ja@gmail.com")
-	setUserEmailToGitConfigCmd.Dir = destDir
-	testCommand(t, setUserEmailToGitConfigCmd)
+	if _, err := execCmd(destDir, "git", "config", "--global", "user.email", "js@example.com"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
 
-	touchCmd := exec.Command("touch", "README.txt")
-	touchCmd.Dir = destDir
-	testCommand(t, touchCmd)
+	if _, err := execCmd(destDir, "touch", "README.txt"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
 
-	addCmd := exec.Command("git", "add", ".")
-	addCmd.Dir = destDir
-	testCommand(t, addCmd)
+	if _, err := execCmd(destDir, "git", "add", "README.txt"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
 
-	commitCmd := exec.Command("git", "commit", "-m", "first commit")
-	commitCmd.Dir = destDir
-	testCommand(t, commitCmd)
+	if _, err := execCmd(destDir, "git", "commit", "-m", "first commit"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
 
-	pushCmd := exec.Command("git", "push", "-u", "origin", "master")
-	pushCmd.Dir = destDir
-	testCommand(t, pushCmd)
+	if _, err := execCmd(destDir, "git", "push", "-u", "origin", "master"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
 
+	if _, err := execCmd(destDir, "wget", "-O-", remoteRepoUrl + "/archive/master.zip"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
 
-	wgetZipCmd := exec.Command("wget", "-O-", remoteUrl + "/archive/master.zip")
-	initCmd.Dir = destDir
-	testCommand(t, wgetZipCmd)
-
-	wgetTarCmd := exec.Command("wget", "-O-", remoteUrl + "/archive/master.tar")
-	initCmd.Dir = destDir
-	testCommand(t, wgetTarCmd)
+	if _, err := execCmd(destDir, "wget", "-O-", remoteRepoUrl + "/archive/master.tar"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
 
 }
 
-func testCommand(t *testing.T, cmd *exec.Cmd) {
-	_, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Errorf("testCommand error: %s", err.Error())
-	}
+func execCmd(dir string, name string, arg ...string) ([]byte, error) {
+	c := exec.Command(name, arg...)
+	c.Dir = dir
+	return c.CombinedOutput()
 }
