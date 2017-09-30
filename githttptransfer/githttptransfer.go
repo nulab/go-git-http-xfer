@@ -26,7 +26,7 @@ var (
 	getIdxFile        = regexp.MustCompile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.idx$")
 )
 
-func New(gitRootPath string, gitBinPath string, uploadPack bool, receivePack bool) *GitHttpTransfer {
+func New(gitRootPath, gitBinPath string, uploadPack, receivePack bool) *GitHttpTransfer {
 
 	if gitRootPath == "" {
 		cwd, err := os.Getwd()
@@ -39,8 +39,9 @@ func New(gitRootPath string, gitBinPath string, uploadPack bool, receivePack boo
 
 	git := newGit(gitRootPath, gitBinPath, uploadPack, receivePack)
 	router := newRouter()
+	event := newEvent()
 
-	gsh := &GitHttpTransfer{git, router}
+	gsh := &GitHttpTransfer{git, router, event}
 	gsh.AddRoute(NewRoute(http.MethodPost, serviceRpcUpload, gsh.serviceRpcUpload))
 	gsh.AddRoute(NewRoute(http.MethodPost, serviceRpcReceive, gsh.serviceRpcReceive))
 	gsh.AddRoute(NewRoute(http.MethodGet, getInfoRefs, gsh.getInfoRefs))
@@ -58,6 +59,7 @@ func New(gitRootPath string, gitBinPath string, uploadPack bool, receivePack boo
 type GitHttpTransfer struct {
 	Git    *git
 	router *router
+	Event Event
 }
 
 func (ght *GitHttpTransfer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
@@ -114,15 +116,45 @@ const (
 
 type HandlerFunc func(ctx Context) error
 
+
+func newEvent() Event {
+	return &event{map[string]HandlerFunc{}}
+}
+
+type Event interface {
+	emit(evt string, ctx Context) error
+	On(evt string, listener HandlerFunc)
+}
+
+type event struct {
+	listeners map[string]HandlerFunc
+}
+
+func (e *event) emit(evt string, ctx Context) error {
+	v, ok := e.listeners[evt]
+	if ok {
+		return v(ctx)
+	}
+	return nil
+}
+
+func (e *event) On(evt string, listener HandlerFunc) {
+	e.listeners[evt] = listener
+}
+
+
 func (ght *GitHttpTransfer) serviceRpcUpload(ctx Context) error {
+	ght.Event.emit("prepare-service-rpc-upload", ctx)
 	return ght.serviceRpc(ctx, uploadPack)
 }
 
 func (ght *GitHttpTransfer) serviceRpcReceive(ctx Context) error {
+	ght.Event.emit("prepare-service-rpc-receive", ctx)
 	return ght.serviceRpc(ctx, receivePack)
 }
 
 func (ght *GitHttpTransfer) serviceRpc(ctx Context, rpc string) error {
+
 	res, req, repoPath := ctx.Response(), ctx.Request(), ctx.RepoPath()
 
 	if !ght.Git.HasAccess(req, rpc, true) {

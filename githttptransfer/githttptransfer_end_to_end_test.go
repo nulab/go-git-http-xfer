@@ -42,6 +42,15 @@ func setupEndToEndTest(t *testing.T) error {
 	endToEndTestParams.repoName = "e2e_test.git"
 
 	endToEndTestParams.ght = New(endToEndTestParams.gitRootPath, endToEndTestParams.gitBinPath, true, true)
+	endToEndTestParams.ght.Event.On("prepare-service-rpc-upload", func(ctx Context) error {
+		t.Log("prepare run service rpc upload.")
+		return nil
+	})
+	endToEndTestParams.ght.Event.On("prepare-service-rpc-receive", func(ctx Context) error {
+		t.Log("prepare run service rpc receive.")
+		return nil
+	})
+
 	endToEndTestParams.ts = httptest.NewServer(endToEndTestParams.ght)
 
 	endToEndTestParams.absRepoPath = endToEndTestParams.ght.Git.GetAbsolutePath(endToEndTestParams.repoName)
