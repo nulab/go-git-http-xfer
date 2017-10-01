@@ -74,24 +74,29 @@ func (ght *GitHttpTransfer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !ght.Git.Exists(repoPath) {
-		RenderNotFound(rw)
+	ctx := NewContext(rw, r, repoPath, filePath)
+
+	if err := ght.Event.emit(AfterMatchRouting, ctx); err != nil {
+		RenderInternalServerError(ctx.Response().Writer)
 		return
 	}
 
-	ctx := NewContext(rw, r, repoPath, filePath)
+	if !ght.Git.Exists(ctx.RepoPath()) {
+		RenderNotFound(ctx.Response().Writer)
+		return
+	}
 
 	if err := handler(ctx); err != nil {
 		if os.IsNotExist(err) {
-			RenderNotFound(rw)
+			RenderNotFound(ctx.Response().Writer)
 			return
 		}
 		switch err.(type) {
 		case *NoAccessError:
-			RenderNoAccess(rw)
+			RenderNoAccess(ctx.Response().Writer)
 			return
 		}
-		RenderInternalServerError(rw)
+		RenderInternalServerError(ctx.Response().Writer)
 	}
 }
 
@@ -118,19 +123,26 @@ type HandlerFunc func(ctx Context) error
 
 
 func newEvent() Event {
-	return &event{map[string]HandlerFunc{}}
+	return &event{map[EventKey]HandlerFunc{}}
 }
 
+type EventKey string
+const (
+	PrepareServiceRpcUpload  EventKey = "prepare-service-rpc-upload"
+	PrepareServiceRpcReceive EventKey = "prepare-service-rpc-receive"
+	AfterMatchRouting EventKey = "after-match-routing"
+)
+
 type Event interface {
-	emit(evt string, ctx Context) error
-	On(evt string, listener HandlerFunc)
+	emit(evt EventKey, ctx Context) error
+	On(evt EventKey, listener HandlerFunc)
 }
 
 type event struct {
-	listeners map[string]HandlerFunc
+	listeners map[EventKey]HandlerFunc
 }
 
-func (e *event) emit(evt string, ctx Context) error {
+func (e *event) emit(evt EventKey, ctx Context) error {
 	v, ok := e.listeners[evt]
 	if ok {
 		return v(ctx)
@@ -138,18 +150,22 @@ func (e *event) emit(evt string, ctx Context) error {
 	return nil
 }
 
-func (e *event) On(evt string, listener HandlerFunc) {
+func (e *event) On(evt EventKey, listener HandlerFunc) {
 	e.listeners[evt] = listener
 }
 
 
 func (ght *GitHttpTransfer) serviceRpcUpload(ctx Context) error {
-	ght.Event.emit("prepare-service-rpc-upload", ctx)
+	if err := ght.Event.emit(PrepareServiceRpcUpload, ctx); err != nil {
+		return err
+	}
 	return ght.serviceRpc(ctx, uploadPack)
 }
 
 func (ght *GitHttpTransfer) serviceRpcReceive(ctx Context) error {
-	ght.Event.emit("prepare-service-rpc-receive", ctx)
+	if err := ght.Event.emit(PrepareServiceRpcReceive, ctx); err != nil {
+		return err
+	}
 	return ght.serviceRpc(ctx, receivePack)
 }
 

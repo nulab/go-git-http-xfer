@@ -42,12 +42,16 @@ func setupEndToEndTest(t *testing.T) error {
 	endToEndTestParams.repoName = "e2e_test.git"
 
 	endToEndTestParams.ght = New(endToEndTestParams.gitRootPath, endToEndTestParams.gitBinPath, true, true)
-	endToEndTestParams.ght.Event.On("prepare-service-rpc-upload", func(ctx Context) error {
+	endToEndTestParams.ght.Event.On(PrepareServiceRpcUpload, func(ctx Context) error {
 		t.Log("prepare run service rpc upload.")
 		return nil
 	})
-	endToEndTestParams.ght.Event.On("prepare-service-rpc-receive", func(ctx Context) error {
+	endToEndTestParams.ght.Event.On(PrepareServiceRpcReceive, func(ctx Context) error {
 		t.Log("prepare run service rpc receive.")
+		return nil
+	})
+	endToEndTestParams.ght.Event.On(AfterMatchRouting, func(ctx Context) error {
+		t.Log("after match routing.")
 		return nil
 	})
 
