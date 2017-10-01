@@ -4,12 +4,12 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"os/exec"
 	"path"
 	"regexp"
-	"testing"
-	"os"
 	"strings"
+	"testing"
 )
 
 type EndToEndTestParams struct {
@@ -42,11 +42,23 @@ func setupEndToEndTest(t *testing.T) error {
 	endToEndTestParams.repoName = "e2e_test.git"
 
 	endToEndTestParams.ght = New(endToEndTestParams.gitRootPath, endToEndTestParams.gitBinPath, true, true)
+	endToEndTestParams.ght.Event.On(PrepareServiceRpcUpload, func(ctx Context) error {
+		t.Log("prepare run service rpc upload.")
+		return nil
+	})
+	endToEndTestParams.ght.Event.On(PrepareServiceRpcReceive, func(ctx Context) error {
+		t.Log("prepare run service rpc receive.")
+		return nil
+	})
+	endToEndTestParams.ght.Event.On(AfterMatchRouting, func(ctx Context) error {
+		t.Log("after match routing.")
+		return nil
+	})
+
 	endToEndTestParams.ts = httptest.NewServer(endToEndTestParams.ght)
 
 	endToEndTestParams.absRepoPath = endToEndTestParams.ght.Git.GetAbsolutePath(endToEndTestParams.repoName)
 	os.Mkdir(endToEndTestParams.absRepoPath, os.ModeDir)
-
 
 	if _, err := execCmd(endToEndTestParams.absRepoPath, "git", "init", "--bare", "--shared"); err != nil {
 		t.Errorf("execute command error: %s", err.Error())
@@ -310,4 +322,3 @@ func Test_End_To_End_it_should_succeed_request_to_get_info_packs(t *testing.T) {
 	}
 
 }
-

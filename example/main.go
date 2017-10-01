@@ -15,6 +15,21 @@ func main() {
 
 	ght := githttptransfer.New("/data/git", "/usr/bin/git", true, true)
 
+	ght.Event.On(githttptransfer.PrepareServiceRpcUpload, func(ctx githttptransfer.Context) error {
+		log.Println("prepare run service rpc upload.")
+		return nil
+	})
+
+	ght.Event.On(githttptransfer.PrepareServiceRpcReceive, func(ctx githttptransfer.Context) error {
+		log.Println("prepare run service rpc receive.")
+		return nil
+	})
+
+	ght.Event.On(githttptransfer.AfterMatchRouting, func(ctx githttptransfer.Context) error {
+		log.Println("after match routing.")
+		return nil
+	})
+
 	// You can add some custom route.
 	ght.AddRoute(githttptransfer.NewRoute(
 		http.MethodGet,

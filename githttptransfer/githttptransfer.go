@@ -26,7 +26,7 @@ var (
 	getIdxFile        = regexp.MustCompile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.idx$")
 )
 
-func New(gitRootPath string, gitBinPath string, uploadPack bool, receivePack bool) *GitHttpTransfer {
+func New(gitRootPath, gitBinPath string, uploadPack, receivePack bool) *GitHttpTransfer {
 
 	if gitRootPath == "" {
 		cwd, err := os.Getwd()
@@ -39,8 +39,9 @@ func New(gitRootPath string, gitBinPath string, uploadPack bool, receivePack boo
 
 	git := newGit(gitRootPath, gitBinPath, uploadPack, receivePack)
 	router := newRouter()
+	event := newEvent()
 
-	gsh := &GitHttpTransfer{git, router}
+	gsh := &GitHttpTransfer{git, router, event}
 	gsh.AddRoute(NewRoute(http.MethodPost, serviceRpcUpload, gsh.serviceRpcUpload))
 	gsh.AddRoute(NewRoute(http.MethodPost, serviceRpcReceive, gsh.serviceRpcReceive))
 	gsh.AddRoute(NewRoute(http.MethodGet, getInfoRefs, gsh.getInfoRefs))
@@ -58,6 +59,7 @@ func New(gitRootPath string, gitBinPath string, uploadPack bool, receivePack boo
 type GitHttpTransfer struct {
 	Git    *git
 	router *router
+	Event  Event
 }
 
 func (ght *GitHttpTransfer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
@@ -72,24 +74,29 @@ func (ght *GitHttpTransfer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !ght.Git.Exists(repoPath) {
-		RenderNotFound(rw)
+	ctx := NewContext(rw, r, repoPath, filePath)
+
+	if err := ght.Event.emit(AfterMatchRouting, ctx); err != nil {
+		RenderInternalServerError(ctx.Response().Writer)
 		return
 	}
 
-	ctx := NewContext(rw, r, repoPath, filePath)
+	if !ght.Git.Exists(ctx.RepoPath()) {
+		RenderNotFound(ctx.Response().Writer)
+		return
+	}
 
 	if err := handler(ctx); err != nil {
 		if os.IsNotExist(err) {
-			RenderNotFound(rw)
+			RenderNotFound(ctx.Response().Writer)
 			return
 		}
 		switch err.(type) {
 		case *NoAccessError:
-			RenderNoAccess(rw)
+			RenderNoAccess(ctx.Response().Writer)
 			return
 		}
-		RenderInternalServerError(rw)
+		RenderInternalServerError(ctx.Response().Writer)
 	}
 }
 
@@ -114,15 +121,55 @@ const (
 
 type HandlerFunc func(ctx Context) error
 
+func newEvent() Event {
+	return &event{map[EventKey]HandlerFunc{}}
+}
+
+type EventKey string
+
+const (
+	PrepareServiceRpcUpload  EventKey = "prepare-service-rpc-upload"
+	PrepareServiceRpcReceive EventKey = "prepare-service-rpc-receive"
+	AfterMatchRouting        EventKey = "after-match-routing"
+)
+
+type Event interface {
+	emit(evt EventKey, ctx Context) error
+	On(evt EventKey, listener HandlerFunc)
+}
+
+type event struct {
+	listeners map[EventKey]HandlerFunc
+}
+
+func (e *event) emit(evt EventKey, ctx Context) error {
+	v, ok := e.listeners[evt]
+	if ok {
+		return v(ctx)
+	}
+	return nil
+}
+
+func (e *event) On(evt EventKey, listener HandlerFunc) {
+	e.listeners[evt] = listener
+}
+
 func (ght *GitHttpTransfer) serviceRpcUpload(ctx Context) error {
+	if err := ght.Event.emit(PrepareServiceRpcUpload, ctx); err != nil {
+		return err
+	}
 	return ght.serviceRpc(ctx, uploadPack)
 }
 
 func (ght *GitHttpTransfer) serviceRpcReceive(ctx Context) error {
+	if err := ght.Event.emit(PrepareServiceRpcReceive, ctx); err != nil {
+		return err
+	}
 	return ght.serviceRpc(ctx, receivePack)
 }
 
 func (ght *GitHttpTransfer) serviceRpc(ctx Context, rpc string) error {
+
 	res, req, repoPath := ctx.Response(), ctx.Request(), ctx.RepoPath()
 
 	if !ght.Git.HasAccess(req, rpc, true) {
