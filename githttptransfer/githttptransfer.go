@@ -59,7 +59,7 @@ func New(gitRootPath, gitBinPath string, uploadPack, receivePack bool) *GitHttpT
 type GitHttpTransfer struct {
 	Git    *git
 	router *router
-	Event Event
+	Event  Event
 }
 
 func (ght *GitHttpTransfer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
@@ -121,16 +121,16 @@ const (
 
 type HandlerFunc func(ctx Context) error
 
-
 func newEvent() Event {
 	return &event{map[EventKey]HandlerFunc{}}
 }
 
 type EventKey string
+
 const (
 	PrepareServiceRpcUpload  EventKey = "prepare-service-rpc-upload"
 	PrepareServiceRpcReceive EventKey = "prepare-service-rpc-receive"
-	AfterMatchRouting EventKey = "after-match-routing"
+	AfterMatchRouting        EventKey = "after-match-routing"
 )
 
 type Event interface {
@@ -153,7 +153,6 @@ func (e *event) emit(evt EventKey, ctx Context) error {
 func (e *event) On(evt EventKey, listener HandlerFunc) {
 	e.listeners[evt] = listener
 }
-
 
 func (ght *GitHttpTransfer) serviceRpcUpload(ctx Context) error {
 	if err := ght.Event.emit(PrepareServiceRpcUpload, ctx); err != nil {

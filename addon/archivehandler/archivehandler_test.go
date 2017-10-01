@@ -1,12 +1,12 @@
 package archivehandler
 
 import (
-	"testing"
-	"os/exec"
-	"net/http/httptest"
 	"io/ioutil"
-	"path"
+	"net/http/httptest"
 	"os"
+	"os/exec"
+	"path"
+	"testing"
 
 	"github.com/vvatanabe/go-git-http-transfer/githttptransfer"
 )
@@ -82,12 +82,12 @@ func Test_it_should_download_archive_repository(t *testing.T) {
 		return
 	}
 
-	if _, err := execCmd(destDir, "wget", "-O-", remoteRepoUrl + "/archive/master.zip"); err != nil {
+	if _, err := execCmd(destDir, "wget", "-O-", remoteRepoUrl+"/archive/master.zip"); err != nil {
 		t.Errorf("execute command error: %s", err.Error())
 		return
 	}
 
-	if _, err := execCmd(destDir, "wget", "-O-", remoteRepoUrl + "/archive/master.tar"); err != nil {
+	if _, err := execCmd(destDir, "wget", "-O-", remoteRepoUrl+"/archive/master.tar"); err != nil {
 		t.Errorf("execute command error: %s", err.Error())
 		return
 	}

@@ -4,12 +4,12 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"os/exec"
 	"path"
 	"regexp"
-	"testing"
-	"os"
 	"strings"
+	"testing"
 )
 
 type EndToEndTestParams struct {
@@ -59,7 +59,6 @@ func setupEndToEndTest(t *testing.T) error {
 
 	endToEndTestParams.absRepoPath = endToEndTestParams.ght.Git.GetAbsolutePath(endToEndTestParams.repoName)
 	os.Mkdir(endToEndTestParams.absRepoPath, os.ModeDir)
-
 
 	if _, err := execCmd(endToEndTestParams.absRepoPath, "git", "init", "--bare", "--shared"); err != nil {
 		t.Errorf("execute command error: %s", err.Error())
@@ -323,4 +322,3 @@ func Test_End_To_End_it_should_succeed_request_to_get_info_packs(t *testing.T) {
 	}
 
 }
-
