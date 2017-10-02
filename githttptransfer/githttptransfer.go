@@ -4,12 +4,12 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 var (
@@ -189,8 +189,6 @@ func (ght *GitHttpTransfer) serviceRpc(ctx Context, rpc string) error {
 	}
 	defer body.Close()
 
-	input, _ := ioutil.ReadAll(body)
-
 	res.SetContentType(fmt.Sprintf("application/x-git-%s-result", rpc))
 
 	args := []string{rpc, "--stateless-rpc", "."}
@@ -205,19 +203,30 @@ func (ght *GitHttpTransfer) serviceRpc(ctx Context, rpc string) error {
 	if err != nil {
 		return err
 	}
-	defer stdout.Close()
 
 	err = cmd.Start()
 	if err != nil {
 		return err
 	}
 
-	stdin.Write(input)
-	stdin.Close()
-	res.Copy(stdout)
-	cmd.Wait()
+	var wg sync.WaitGroup
+	wg.Add(2)
 
-	return nil
+	go func() {
+		defer wg.Done()
+		defer stdin.Close()
+		io.Copy(stdin, body)
+	}()
+
+	go func() {
+		defer wg.Done()
+		defer stdout.Close()
+		res.Copy(stdout)
+	}()
+
+	wg.Wait()
+
+	return cmd.Wait()
 
 }
 
