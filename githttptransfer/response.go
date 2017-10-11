@@ -40,10 +40,10 @@ func (r *Response) HdrNocache() {
 
 func (r *Response) HdrCacheForever() {
 	now := time.Now().Unix()
-	expires := now + 31536000
+	expires := now + 31536000 // const what is it? Forever?
 	r.Header().Set("Date", fmt.Sprintf("%d", now))
 	r.Header().Set("Expires", fmt.Sprintf("%d", expires))
-	r.Header().Set("Cache-Control", "public, max-age=31536000")
+	r.Header().Set("Cache-Control", "public, max-age=31536000") // use constant
 }
 
 func (r *Response) WriteHeader(code int) {

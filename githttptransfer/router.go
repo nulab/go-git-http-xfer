@@ -23,18 +23,18 @@ func (r *router) match(method string, path string) (match []string, route *Route
 					Method: method,
 					Path:   path,
 				}
-				return nil, nil, err
+				return nil, nil, err // no need to return params?
 			}
 			match = m
 			route = v
-			return match, route, nil
+			return match, route, nil // no need to return params?
 		}
 	}
 	err = &UrlNotFoundError{
 		Method: method,
 		Path:   path,
 	}
-	return nil, nil, err
+	return nil, nil, err // no need to return params?
 }
 
 func newRouter() *router {

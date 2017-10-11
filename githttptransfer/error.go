@@ -2,7 +2,7 @@ package githttptransfer
 
 import "fmt"
 
-type UrlNotFoundError struct {
+type UrlNotFoundError struct { //URLNotFoundError
 	Method string
 	Path   string
 }

@@ -8,9 +8,11 @@ import (
 	"testing"
 )
 
+// Could be converted to a table driven test with the next test
+// https://github.com/golang/go/wiki/TableDrivenTests
 func Test_it_should_return_403_if_upload_pack_is_off(t *testing.T) {
 
-	_, err := exec.LookPath("git")
+	_, err := exec.LookPath("git") // could be merged in one statement
 	if err != nil {
 		log.Println("git is not found. so skip test.")
 	}
@@ -68,6 +70,7 @@ func Test_it_should_return_403_if_receive_pack_is_off(t *testing.T) {
 
 }
 
+// Could be converted to a table driven test with the next test
 func Test_GitSmartHttp_MatchRouting_should_match_git_upload_pack(t *testing.T) {
 	gsh := New("", "/usr/bin/git", true, true)
 	m := http.MethodPost
@@ -90,17 +93,19 @@ func Test_GitSmartHttp_MatchRouting_should_not_match_if_http_method_is_different
 	gsh := New("", "/usr/bin/git", true, true)
 	m := http.MethodGet
 	p := "/base/foo/git-upload-pack"
-	_, _, _, err := gsh.MatchRouting(m, p)
+	_, _, _, err := gsh.MatchRouting(m, p) // can be merged in one statement
 	if err == nil {
 		t.Error("Allowed.")
 	}
-	switch err.(type) {
+	switch err.(type) {  // if _, is:= err.(*MethodNotAllowedError)
 	case *MethodNotAllowedError:
 		return
 	}
 	t.Errorf("error is not MethodNotAllowedError' . result: %s", err.Error())
 }
 
+// Could be converted to a table driven test
+// https://github.com/golang/go/wiki/TableDrivenTests
 func Test_GitSmartHttp_MatchRouting_should_match_get_info_refs(t *testing.T) {
 	gsh := New("", "/usr/bin/git", true, true)
 	m := http.MethodGet

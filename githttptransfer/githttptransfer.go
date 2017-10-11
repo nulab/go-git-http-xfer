@@ -13,12 +13,12 @@ import (
 )
 
 var (
-	serviceRpcUpload  = regexp.MustCompile("(.*?)/git-upload-pack$")
-	serviceRpcReceive = regexp.MustCompile("(.*?)/git-receive-pack$")
+	serviceRpcUpload  = regexp.MustCompile("(.*?)/git-upload-pack$") // serviceRPCUpload
+	serviceRpcReceive = regexp.MustCompile("(.*?)/git-receive-pack$") // serviceRPCReceive
 	getInfoRefs       = regexp.MustCompile("(.*?)/info/refs$")
 	getHead           = regexp.MustCompile("(.*?)/HEAD$")
 	getAlternates     = regexp.MustCompile("(.*?)/objects/info/alternates$")
-	getHttpAlternates = regexp.MustCompile("(.*?)/objects/info/http-alternates$")
+	getHttpAlternates = regexp.MustCompile("(.*?)/objects/info/http-alternates$") // getHTTPAlternates
 	getInfoPacks      = regexp.MustCompile("(.*?)/objects/info/packs$")
 	getInfoFile       = regexp.MustCompile("(.*?)/objects/info/[^/]*$")
 	getLooseObject    = regexp.MustCompile("(.*?)/objects/[0-9a-f]{2}/[0-9a-f]{38}$")
@@ -31,7 +31,7 @@ func New(gitRootPath, gitBinPath string, uploadPack, receivePack bool) *GitHttpT
 	if gitRootPath == "" {
 		cwd, err := os.Getwd()
 		if err != nil {
-			log.Fatalf("Invalid GitRootPath. os.Getwd() error: %s", err.Error())
+			log.Fatalf("Invalid GitRootPath. os.Getwd() error: %s", err.Error()) // Should return error instead of exiting
 			return nil
 		}
 		gitRootPath = cwd
@@ -56,7 +56,7 @@ func New(gitRootPath, gitBinPath string, uploadPack, receivePack bool) *GitHttpT
 	return gsh
 }
 
-type GitHttpTransfer struct {
+type GitHttpTransfer struct { // GitHTTPTransfer
 	Git    *git
 	router *router
 	Event  Event
@@ -128,8 +128,8 @@ func newEvent() Event {
 type EventKey string
 
 const (
-	PrepareServiceRpcUpload  EventKey = "prepare-service-rpc-upload"
-	PrepareServiceRpcReceive EventKey = "prepare-service-rpc-receive"
+	PrepareServiceRpcUpload  EventKey = "prepare-service-rpc-upload" // PrepareServiceRPCUpload
+	PrepareServiceRpcReceive EventKey = "prepare-service-rpc-receive" // PrepareServiceRPCReceive
 	AfterMatchRouting        EventKey = "after-match-routing"
 )
 
@@ -204,7 +204,7 @@ func (ght *GitHttpTransfer) serviceRpc(ctx Context, rpc string) error {
 		return err
 	}
 
-	err = cmd.Start()
+	err = cmd.Start() // could be merged in one statement
 	if err != nil {
 		return err
 	}

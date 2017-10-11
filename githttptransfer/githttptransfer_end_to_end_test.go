@@ -17,7 +17,7 @@ type EndToEndTestParams struct {
 	gitBinPath     string
 	repoName       string
 	absRepoPath    string
-	remoteRepoUrl  string
+	remoteRepoUrl  string // remoteRepoURL
 	workingDirPath string // Ex: output destination of git clone.
 	ght            *GitHttpTransfer
 	ts             *httptest.Server
@@ -247,6 +247,7 @@ func Test_End_To_End_it_should_succeed_request_to_loose_objects(t *testing.T) {
 
 }
 
+// Should succeed but check if not 404. Rename the test
 func Test_End_To_End_it_should_succeed_request_to_get_info_packs(t *testing.T) {
 
 	if err := setupEndToEndTest(t); err != nil {
@@ -265,7 +266,7 @@ func Test_End_To_End_it_should_succeed_request_to_get_info_packs(t *testing.T) {
 		return
 	}
 
-	if res.StatusCode != 200 {
+	if res.StatusCode != 200 { // http.StatusOK
 		url := res.Request.Host + res.Request.URL.RequestURI()
 		t.Errorf("StatusCode is not 200. result: %d, url: %s", res.StatusCode, url)
 		return
@@ -287,14 +288,14 @@ func Test_End_To_End_it_should_succeed_request_to_get_info_packs(t *testing.T) {
 		return
 	}
 
-	infoPacksUrl := endToEndTestParams.remoteRepoUrl + "/objects/pack/" + m[1]
+	infoPacksUrl := endToEndTestParams.remoteRepoUrl + "/objects/pack/" + m[1] // infoPacksURL
 	res, err = http.Get(infoPacksUrl)
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
 		return
 	}
 
-	if res.StatusCode != 200 {
+	if res.StatusCode != 200 { // http.StatusOK
 		t.Errorf("StatusCode is not 200. url: %s, result: %d", infoPacksUrl, res.StatusCode)
 		return
 	}
@@ -305,7 +306,7 @@ func Test_End_To_End_it_should_succeed_request_to_get_info_packs(t *testing.T) {
 		return
 	}
 
-	if res.StatusCode != 200 {
+	if res.StatusCode != 200 { // http.StatusOK
 		t.Errorf("StatusCode is not 200. url: %s, result: %d", infoPacksUrl, res.StatusCode)
 		return
 	}
@@ -316,7 +317,8 @@ func Test_End_To_End_it_should_succeed_request_to_get_info_packs(t *testing.T) {
 		return
 	}
 
-	if res.StatusCode != 404 {
+	// http.StatusNotFound
+	if res.StatusCode != 404 { // http.StatusNotFound
 		t.Errorf("StatusCode is not 404. result: %d", res.StatusCode)
 		return
 	}
