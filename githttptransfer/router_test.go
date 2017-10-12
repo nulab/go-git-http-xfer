@@ -93,7 +93,7 @@ func Test_Router_Match_should_return_MethodNotAllowed_error(t *testing.T) {
 	if route != nil {
 		t.Error("route is not nil.")
 	}
-	switch err.(type) {
+	switch err.(type) { // if _, is := err.(*MethodNotAllowedError); is
 	case *MethodNotAllowedError:
 		return
 	}

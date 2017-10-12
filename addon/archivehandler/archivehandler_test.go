@@ -13,7 +13,7 @@ import (
 
 func Test_it_should_download_archive_repository(t *testing.T) {
 
-	_, err := exec.LookPath("git")
+	_, err := exec.LookPath("git") // Can be merged in one statement
 	if err != nil {
 		t.Log("git is not found. so skip git archive test.")
 		return
