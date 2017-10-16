@@ -21,7 +21,7 @@ $ docker run -it --rm -v $PWD:/go/src/github.com/vvatanabe/go-git-http-transfer 
     -p 8080:8080 git-http-transfer-build bash
 
 # in container
-$ go run /go/src/github.com/vvatanabe/go-git-http-transfer/example/main.go
+$ go run /go/src/github.com/vvatanabe/go-git-http-transfer/example/main.go -p 8080
 
 # in your local machine
 $ git clone http://localhost:8080/example.git
@@ -49,9 +49,14 @@ import (
 )
 
 func main() {
-	ght := githttptransfer.New("/data/git", "/usr/bin/git", true, true)
-	err := http.ListenAndServe(":8080", ght)
+	
+	ght, err := githttptransfer.New("/data/git", "/usr/bin/git", true, true, true)
 	if err != nil {
+		log.Fatalf("GitHTTPTransfer instance could not be created. %s", err.Error())
+		return
+	}
+	
+	if err := http.ListenAndServe(":8080", ght); err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
 }
@@ -59,8 +64,15 @@ func main() {
 You can add some custom route.
 ``` go
 func main() {
-	ght := githttptransfer.New("/data/git", "/usr/bin/git", true, true)
-	ght.AddRoute(githttptransfer.NewRoute(
+
+	ght, err := githttptransfer.New("/data/git", "/usr/bin/git", true, true, true)
+	if err != nil {
+		log.Fatalf("GitHTTPTransfer instance could not be created. %s", err.Error())
+		return
+	}
+
+	// You can add some custom route.
+	ght.Router.Add(githttptransfer.NewRoute(
 		http.MethodGet,
 		regexp.MustCompile("(.*?)/hello$"),
 		func(ctx githttptransfer.Context) error {
@@ -72,18 +84,30 @@ func main() {
 			return nil
 		},
 	))
-	err := http.ListenAndServe(":8080", ght)
+	
+	if err := http.ListenAndServe(":8080", ght); err != nil {
+		log.Fatal("ListenAndServe: ", err)
+	}
 }
 ```
 You can add some middleware.
 ``` go
 func main() {
-	ght := githttptransfer.New("/data/git", "/usr/bin/git", true, true)
-	handler := Logger(ght)
-	err := http.ListenAndServe(":8080", handler)
+	
+	ght, err := githttptransfer.New("/data/git", "/usr/bin/git", true, true, true)
+	if err != nil {
+		log.Fatalf("GitHTTPTransfer instance could not be created. %s", err.Error())
+		return
+	}
+	
+	handler := Logging(ght)
+	
+	if err := http.ListenAndServe(":8080", ght); err != nil {
+		log.Fatal("ListenAndServe: ", err)
+	}
 }
 
-func Logger(next http.Handler) http.Handler {
+func Logging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t1 := time.Now()
 		next.ServeHTTP(w, r)
@@ -99,13 +123,21 @@ import (
 )
 
 func main() {
-	ght := githttptransfer.New("/data/git", "/usr/bin/git", true, true)
-	ght.AddRoute(githttptransfer.NewRoute(
+	ght, err := githttptransfer.New("/data/git", "/usr/bin/git", true, true, true)
+	if err != nil {
+		log.Fatalf("GitHTTPTransfer instance could not be created. %s", err.Error())
+		return
+	}
+	
+	ght.Router.Add(githttptransfer.NewRoute(
 		archivehandler.Method,
 		archivehandler.Pattern,
 		archivehandler.New(ght).HandlerFunc,
 	))
-	err := http.ListenAndServe(":8080", ght)
+	
+	if err := http.ListenAndServe(":8080", ght); err != nil {
+		log.Fatal("ListenAndServe: ", err)
+	}
 }
 
 ```
