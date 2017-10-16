@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// Can be converted to a table driven test
+// TODO Can be converted to a table driven test
 // https://github.com/golang/go/wiki/TableDrivenTests
 func Test_GetServiceType_should_return_git_upload_pack(t *testing.T) {
 	m := http.MethodPost

@@ -8,9 +8,10 @@
 # [attach]
 # docker run -it --rm -v $PWD:/go/src/github.com/vvatanabe/go-git-http-transfer -p 8080:8080 git-http-transfer-build bash
 #
-# [run server]
-# (in container)
-# go run /go/src/github.com/vvatanabe/go-git-http-transfer/example/main.go
+# [run server](in container)
+# go run /go/src/github.com/vvatanabe/go-git-http-transfer/example/main.go -p 8080
+# And
+# gin -t ./example -p 8080 -a 5050
 #
 # OFFICIAL REPOSITORY: https://hub.docker.com/_/golang/
 FROM golang:1.9
@@ -20,10 +21,10 @@ MAINTAINER Yuichi Watanabe
 ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends curl wget unzip libssl-dev openssl ca-certificates git \
+  && apt-get install -y --no-install-recommends vim curl wget unzip libssl-dev openssl ca-certificates git \
   && rm -fr /var/lib/apt/lists/*
 
-RUN go get github.com/pierrre/gotestcover
+RUN go get github.com/pierrre/gotestcover && go get github.com/codegangsta/gin
 
 ENV TZ Asia/Tokyo
 

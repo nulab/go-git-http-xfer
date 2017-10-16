@@ -38,12 +38,14 @@ func (r *Response) HdrNocache() {
 	r.Header().Set("Cache-Control", "no-cache, max-age=0, must-revalidate")
 }
 
+const forever = 31536000
+
 func (r *Response) HdrCacheForever() {
 	now := time.Now().Unix()
-	expires := now + 31536000 // const what is it? Forever?
+	expires := now + forever
 	r.Header().Set("Date", fmt.Sprintf("%d", now))
 	r.Header().Set("Expires", fmt.Sprintf("%d", expires))
-	r.Header().Set("Cache-Control", "public, max-age=31536000") // use constant
+	r.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d", forever))
 }
 
 func (r *Response) WriteHeader(code int) {
@@ -58,8 +60,10 @@ func (r *Response) Copy(stdout io.Reader) (int64, error) {
 	return io.Copy(r.Writer, stdout)
 }
 
+const endEdge = "0000"
+
 func (r *Response) PktFlush() (int, error) {
-	return r.Write([]byte("0000"))
+	return r.Write([]byte(endEdge))
 }
 
 func (r *Response) PktWrite(str string) (int, error) {

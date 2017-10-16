@@ -8,14 +8,14 @@ type router struct {
 	routes []*Route
 }
 
-func (r *router) add(route *Route) {
+func (r *router) Add(route *Route) {
 	if r.routes == nil {
 		r.routes = []*Route{}
 	}
 	r.routes = append(r.routes, route)
 }
 
-func (r *router) match(method string, path string) (match []string, route *Route, err error) {
+func (r *router) Match(method string, path string) (match []string, route *Route, err error) {
 	for _, v := range r.routes {
 		if m := v.Pattern.FindStringSubmatch(path); m != nil {
 			if v.Method != method {
@@ -23,18 +23,18 @@ func (r *router) match(method string, path string) (match []string, route *Route
 					Method: method,
 					Path:   path,
 				}
-				return nil, nil, err // no need to return params?
+				return
 			}
 			match = m
 			route = v
-			return match, route, nil // no need to return params?
+			return
 		}
 	}
-	err = &UrlNotFoundError{
+	err = &URLNotFoundError{
 		Method: method,
 		Path:   path,
 	}
-	return nil, nil, err // no need to return params?
+	return
 }
 
 func newRouter() *router {

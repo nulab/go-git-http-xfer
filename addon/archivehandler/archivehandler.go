@@ -2,7 +2,6 @@ package archivehandler
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"path"
 	"regexp"
@@ -16,15 +15,15 @@ var (
 	Method  = http.MethodGet
 )
 
-func New(ght *githttptransfer.GitHttpTransfer) *archiveHandler { // archiveHandler is not exported
-	return &archiveHandler{ght}
+func New(ght *githttptransfer.GitHTTPTransfer) *ArchiveHandler {
+	return &ArchiveHandler{ght}
 }
 
-type archiveHandler struct {
-	*githttptransfer.GitHttpTransfer
+type ArchiveHandler struct {
+	*githttptransfer.GitHTTPTransfer
 }
 
-func (ght *archiveHandler) HandlerFunc(ctx githttptransfer.Context) error {
+func (ght *ArchiveHandler) HandlerFunc(ctx githttptransfer.Context) error {
 
 	res, repoPath, filePath := ctx.Response(), ctx.RepoPath(), ctx.FilePath()
 
@@ -39,13 +38,11 @@ func (ght *archiveHandler) HandlerFunc(ctx githttptransfer.Context) error {
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		log.Printf("archiveHandler - git archive stdout(%s). error: %s", cmd.Args, err.Error()) // Do you need to log?
 		return err
 	}
 	defer stdout.Close()
 
 	if err := cmd.Start(); err != nil {
-		log.Printf("archiveHandler - git archive start(%s). error: %s", cmd.Args, err.Error())
 		return err
 	}
 
@@ -54,11 +51,9 @@ func (ght *archiveHandler) HandlerFunc(ctx githttptransfer.Context) error {
 	res.Header().Add("Content-Transfer-Encoding", "binary")
 
 	if _, err := res.Copy(stdout); err != nil {
-		log.Printf("archiveHandler - copy stdout to response(%s). error: %s", cmd.Args, err.Error()) // Do you need to log?
 		return err
 	}
 	if err := cmd.Wait(); err != nil {
-		log.Printf("archiveHandler - git archive wait(%s). error: %s", cmd.Args, err.Error()) // Do you need to log?
 		return err
 	}
 	return nil

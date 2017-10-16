@@ -2,12 +2,12 @@ package githttptransfer
 
 import "fmt"
 
-type UrlNotFoundError struct { //URLNotFoundError
+type URLNotFoundError struct {
 	Method string
 	Path   string
 }
 
-func (e *UrlNotFoundError) Error() string {
+func (e *URLNotFoundError) Error() string {
 	return fmt.Sprintf("Url Not Found: Method %s, Path %s", e.Method, e.Path)
 }
 

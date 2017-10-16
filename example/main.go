@@ -7,31 +7,41 @@ import (
 	"regexp"
 	"time"
 
+	"flag"
+
 	"github.com/vvatanabe/go-git-http-transfer/addon/archivehandler"
 	"github.com/vvatanabe/go-git-http-transfer/githttptransfer"
 )
 
 func main() {
 
-	ght := githttptransfer.New("/data/git", "/usr/bin/git", true, true)
+	var port int
+	flag.IntVar(&port, "p", 5050, "port of git httpd server.")
+	flag.Parse()
 
-	ght.Event.On(githttptransfer.PrepareServiceRpcUpload, func(ctx githttptransfer.Context) error {
-		log.Println("prepare run service rpc upload.")
+	ght, err := githttptransfer.New("/data/git", "/usr/bin/git", true, true, true)
+	if err != nil {
+		log.Fatalf("GitHTTPTransfer instance could not be created. %s", err.Error())
+		return
+	}
+
+	ght.Event.On(githttptransfer.PrepareServiceRPCUpload, func(ctx githttptransfer.Context) error {
+		// prepare run service rpc upload.
 		return nil
 	})
 
-	ght.Event.On(githttptransfer.PrepareServiceRpcReceive, func(ctx githttptransfer.Context) error {
-		log.Println("prepare run service rpc receive.")
+	ght.Event.On(githttptransfer.PrepareServiceRPCReceive, func(ctx githttptransfer.Context) error {
+		// prepare run service rpc receive.
 		return nil
 	})
 
 	ght.Event.On(githttptransfer.AfterMatchRouting, func(ctx githttptransfer.Context) error {
-		log.Println("after match routing.")
+		// after match routing.
 		return nil
 	})
 
 	// You can add some custom route.
-	ght.AddRoute(githttptransfer.NewRoute(
+	ght.Router.Add(githttptransfer.NewRoute(
 		http.MethodGet,
 		regexp.MustCompile("(.*?)/hello$"),
 		func(ctx githttptransfer.Context) error {
@@ -45,23 +55,22 @@ func main() {
 	))
 
 	// You can add some addon handler. (git archive)
-	ght.AddRoute(githttptransfer.NewRoute(
+	ght.Router.Add(githttptransfer.NewRoute(
 		archivehandler.Method,
 		archivehandler.Pattern,
 		archivehandler.New(ght).HandlerFunc,
 	))
 
 	// You can add some middleware.
-	handler := Logger(ght)
+	handler := Logging(ght)
 
-	err := http.ListenAndServe(":8080", handler)
-	if err != nil {
+	if err := http.ListenAndServe(fmt.Sprintf(":%d", port), handler); err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
 
 }
 
-func Logger(next http.Handler) http.Handler {
+func Logging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t1 := time.Now()
 		next.ServeHTTP(w, r)

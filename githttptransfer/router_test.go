@@ -8,13 +8,13 @@ import (
 
 func Test_Router_Append_should_append_route(t *testing.T) {
 	router := &router{}
-	router.add(&Route{
+	router.Add(&Route{
 		http.MethodPost,
 		regexp.MustCompile("(.*?)/foo"),
 		func(ctx Context) error {
 			return nil
 		}})
-	router.add(&Route{
+	router.Add(&Route{
 		http.MethodPost,
 		regexp.MustCompile("(.*?)/bar"),
 		func(ctx Context) error {
@@ -29,13 +29,13 @@ func Test_Router_Append_should_append_route(t *testing.T) {
 
 func Test_Router_Match_should_match_route(t *testing.T) {
 	router := &router{}
-	router.add(&Route{
+	router.Add(&Route{
 		http.MethodPost,
 		regexp.MustCompile("(.*?)/foo"),
 		func(ctx Context) error {
 			return nil
 		}})
-	match, route, err := router.match(http.MethodPost, "/base/foo")
+	match, route, err := router.Match(http.MethodPost, "/base/foo")
 	if err != nil {
 		t.Errorf("error is %s", err.Error())
 	}
@@ -52,13 +52,13 @@ func Test_Router_Match_should_match_route(t *testing.T) {
 
 func Test_Router_Match_should_return_UrlNotFound_error(t *testing.T) {
 	router := &router{}
-	router.add(&Route{
+	router.Add(&Route{
 		http.MethodPost,
 		regexp.MustCompile("(.*?)/foo"),
 		func(ctx Context) error {
 			return nil
 		}})
-	match, route, err := router.match(http.MethodPost, "/base/hoge")
+	match, route, err := router.Match(http.MethodPost, "/base/hoge")
 	if err == nil {
 		t.Error("error is nil.")
 	}
@@ -69,7 +69,7 @@ func Test_Router_Match_should_return_UrlNotFound_error(t *testing.T) {
 		t.Error("route is not nil.")
 	}
 	switch err.(type) {
-	case *UrlNotFoundError:
+	case *URLNotFoundError:
 		return
 	}
 	t.Errorf("error is not UrlNotFound. %s", err.Error())
@@ -77,13 +77,13 @@ func Test_Router_Match_should_return_UrlNotFound_error(t *testing.T) {
 
 func Test_Router_Match_should_return_MethodNotAllowed_error(t *testing.T) {
 	router := &router{}
-	router.add(&Route{
+	router.Add(&Route{
 		http.MethodPost,
 		regexp.MustCompile("(.*?)/foo"),
 		func(ctx Context) error {
 			return nil
 		}})
-	match, route, err := router.match(http.MethodGet, "/base/foo")
+	match, route, err := router.Match(http.MethodGet, "/base/foo")
 	if err == nil {
 		t.Error("error is nil.")
 	}
@@ -93,9 +93,8 @@ func Test_Router_Match_should_return_MethodNotAllowed_error(t *testing.T) {
 	if route != nil {
 		t.Error("route is not nil.")
 	}
-	switch err.(type) { // if _, is := err.(*MethodNotAllowedError); is
-	case *MethodNotAllowedError:
+	if _, is := err.(*MethodNotAllowedError); !is {
+		t.Errorf("error is not MethodNotAllowed. %s", err.Error())
 		return
 	}
-	t.Errorf("error is not MethodNotAllowed. %s", err.Error())
 }
