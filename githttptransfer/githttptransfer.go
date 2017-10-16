@@ -4,7 +4,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"regexp"
@@ -13,12 +12,12 @@ import (
 )
 
 var (
-	serviceRpcUpload  = regexp.MustCompile("(.*?)/git-upload-pack$") // serviceRPCUpload
-	serviceRpcReceive = regexp.MustCompile("(.*?)/git-receive-pack$") // serviceRPCReceive
+	serviceRPCUpload  = regexp.MustCompile("(.*?)/git-upload-pack$")
+	serviceRPCReceive = regexp.MustCompile("(.*?)/git-receive-pack$")
 	getInfoRefs       = regexp.MustCompile("(.*?)/info/refs$")
 	getHead           = regexp.MustCompile("(.*?)/HEAD$")
 	getAlternates     = regexp.MustCompile("(.*?)/objects/info/alternates$")
-	getHttpAlternates = regexp.MustCompile("(.*?)/objects/info/http-alternates$") // getHTTPAlternates
+	getHTTPAlternates = regexp.MustCompile("(.*?)/objects/info/http-alternates$")
 	getInfoPacks      = regexp.MustCompile("(.*?)/objects/info/packs$")
 	getInfoFile       = regexp.MustCompile("(.*?)/objects/info/[^/]*$")
 	getLooseObject    = regexp.MustCompile("(.*?)/objects/[0-9a-f]{2}/[0-9a-f]{38}$")
@@ -26,13 +25,12 @@ var (
 	getIdxFile        = regexp.MustCompile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.idx$")
 )
 
-func New(gitRootPath, gitBinPath string, uploadPack, receivePack bool) *GitHttpTransfer {
+func New(gitRootPath, gitBinPath string, uploadPack, receivePack, dumbProto bool) (*GitHTTPTransfer, error) {
 
 	if gitRootPath == "" {
 		cwd, err := os.Getwd()
 		if err != nil {
-			log.Fatalf("Invalid GitRootPath. os.Getwd() error: %s", err.Error()) // Should return error instead of exiting
-			return nil
+			return nil, err
 		}
 		gitRootPath = cwd
 	}
@@ -41,32 +39,35 @@ func New(gitRootPath, gitBinPath string, uploadPack, receivePack bool) *GitHttpT
 	router := newRouter()
 	event := newEvent()
 
-	gsh := &GitHttpTransfer{git, router, event}
-	gsh.AddRoute(NewRoute(http.MethodPost, serviceRpcUpload, gsh.serviceRpcUpload))
-	gsh.AddRoute(NewRoute(http.MethodPost, serviceRpcReceive, gsh.serviceRpcReceive))
-	gsh.AddRoute(NewRoute(http.MethodGet, getInfoRefs, gsh.getInfoRefs))
-	gsh.AddRoute(NewRoute(http.MethodGet, getHead, gsh.getTextFile))
-	gsh.AddRoute(NewRoute(http.MethodGet, getAlternates, gsh.getTextFile))
-	gsh.AddRoute(NewRoute(http.MethodGet, getHttpAlternates, gsh.getTextFile))
-	gsh.AddRoute(NewRoute(http.MethodGet, getInfoPacks, gsh.getInfoPacks))
-	gsh.AddRoute(NewRoute(http.MethodGet, getInfoFile, gsh.getTextFile))
-	gsh.AddRoute(NewRoute(http.MethodGet, getLooseObject, gsh.getLooseObject))
-	gsh.AddRoute(NewRoute(http.MethodGet, getPackFile, gsh.getPackFile))
-	gsh.AddRoute(NewRoute(http.MethodGet, getIdxFile, gsh.getIdxFile))
-	return gsh
+	ght := &GitHTTPTransfer{git, router, event}
+	ght.Router.Add(NewRoute(http.MethodPost, serviceRPCUpload, ght.serviceRPCUpload))
+	ght.Router.Add(NewRoute(http.MethodPost, serviceRPCReceive, ght.serviceRPCReceive))
+	ght.Router.Add(NewRoute(http.MethodGet, getInfoRefs, ght.getInfoRefs))
+
+	if dumbProto {
+		ght.Router.Add(NewRoute(http.MethodGet, getHead, ght.getTextFile))
+		ght.Router.Add(NewRoute(http.MethodGet, getAlternates, ght.getTextFile))
+		ght.Router.Add(NewRoute(http.MethodGet, getHTTPAlternates, ght.getTextFile))
+		ght.Router.Add(NewRoute(http.MethodGet, getInfoPacks, ght.getInfoPacks))
+		ght.Router.Add(NewRoute(http.MethodGet, getInfoFile, ght.getTextFile))
+		ght.Router.Add(NewRoute(http.MethodGet, getLooseObject, ght.getLooseObject))
+		ght.Router.Add(NewRoute(http.MethodGet, getPackFile, ght.getPackFile))
+		ght.Router.Add(NewRoute(http.MethodGet, getIdxFile, ght.getIdxFile))
+	}
+	return ght, nil
 }
 
-type GitHttpTransfer struct { // GitHTTPTransfer
+type GitHTTPTransfer struct {
 	Git    *git
-	router *router
-	Event  Event
+	Router *router
+	Event  *event
 }
 
-func (ght *GitHttpTransfer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (ght *GitHTTPTransfer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
-	repoPath, filePath, handler, err := ght.MatchRouting(r.Method, r.URL.Path)
+	repoPath, filePath, handler, err := ght.matchRouting(r.Method, r.URL.Path)
 	switch err.(type) {
-	case *UrlNotFoundError:
+	case *URLNotFoundError:
 		RenderNotFound(rw)
 		return
 	case *MethodNotAllowedError:
@@ -100,18 +101,14 @@ func (ght *GitHttpTransfer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (ght *GitHttpTransfer) MatchRouting(method, path string) (repoPath string, filePath string, handler HandlerFunc, err error) {
-	match, route, err := ght.router.match(method, path)
+func (ght *GitHTTPTransfer) matchRouting(method, path string) (repoPath string, filePath string, handler HandlerFunc, err error) {
+	match, route, err := ght.Router.Match(method, path)
 	if err == nil {
 		repoPath = match[1]
 		filePath = strings.Replace(path, repoPath+"/", "", 1)
 		handler = route.Handler
 	}
 	return
-}
-
-func (ght *GitHttpTransfer) AddRoute(route *Route) {
-	ght.router.add(route)
 }
 
 const (
@@ -121,22 +118,17 @@ const (
 
 type HandlerFunc func(ctx Context) error
 
-func newEvent() Event {
+func newEvent() *event {
 	return &event{map[EventKey]HandlerFunc{}}
 }
 
 type EventKey string
 
 const (
-	PrepareServiceRpcUpload  EventKey = "prepare-service-rpc-upload" // PrepareServiceRPCUpload
-	PrepareServiceRpcReceive EventKey = "prepare-service-rpc-receive" // PrepareServiceRPCReceive
+	PrepareServiceRPCUpload  EventKey = "prepare-service-rpc-upload"
+	PrepareServiceRPCReceive EventKey = "prepare-service-rpc-receive"
 	AfterMatchRouting        EventKey = "after-match-routing"
 )
-
-type Event interface {
-	emit(evt EventKey, ctx Context) error
-	On(evt EventKey, listener HandlerFunc)
-}
 
 type event struct {
 	listeners map[EventKey]HandlerFunc
@@ -154,21 +146,21 @@ func (e *event) On(evt EventKey, listener HandlerFunc) {
 	e.listeners[evt] = listener
 }
 
-func (ght *GitHttpTransfer) serviceRpcUpload(ctx Context) error {
-	if err := ght.Event.emit(PrepareServiceRpcUpload, ctx); err != nil {
+func (ght *GitHTTPTransfer) serviceRPCUpload(ctx Context) error {
+	if err := ght.Event.emit(PrepareServiceRPCUpload, ctx); err != nil {
 		return err
 	}
-	return ght.serviceRpc(ctx, uploadPack)
+	return ght.serviceRPC(ctx, uploadPack)
 }
 
-func (ght *GitHttpTransfer) serviceRpcReceive(ctx Context) error {
-	if err := ght.Event.emit(PrepareServiceRpcReceive, ctx); err != nil {
+func (ght *GitHTTPTransfer) serviceRPCReceive(ctx Context) error {
+	if err := ght.Event.emit(PrepareServiceRPCReceive, ctx); err != nil {
 		return err
 	}
-	return ght.serviceRpc(ctx, receivePack)
+	return ght.serviceRPC(ctx, receivePack)
 }
 
-func (ght *GitHttpTransfer) serviceRpc(ctx Context, rpc string) error {
+func (ght *GitHTTPTransfer) serviceRPC(ctx Context, rpc string) error {
 
 	res, req, repoPath := ctx.Response(), ctx.Request(), ctx.RepoPath()
 
@@ -230,7 +222,7 @@ func (ght *GitHttpTransfer) serviceRpc(ctx Context, rpc string) error {
 
 }
 
-func (ght *GitHttpTransfer) getInfoRefs(ctx Context) error {
+func (ght *GitHTTPTransfer) getInfoRefs(ctx Context) error {
 	res, req, repoPath := ctx.Response(), ctx.Request(), ctx.RepoPath()
 
 	serviceName := getServiceType(req)
@@ -255,32 +247,32 @@ func (ght *GitHttpTransfer) getInfoRefs(ctx Context) error {
 	return nil
 }
 
-func (ght *GitHttpTransfer) getInfoPacks(ctx Context) error {
+func (ght *GitHTTPTransfer) getInfoPacks(ctx Context) error {
 	ctx.Response().HdrCacheForever()
 	return ght.sendFile("text/plain; charset=utf-8", ctx)
 }
 
-func (ght *GitHttpTransfer) getLooseObject(ctx Context) error {
+func (ght *GitHTTPTransfer) getLooseObject(ctx Context) error {
 	ctx.Response().HdrCacheForever()
 	return ght.sendFile("application/x-git-loose-object", ctx)
 }
 
-func (ght *GitHttpTransfer) getPackFile(ctx Context) error {
+func (ght *GitHTTPTransfer) getPackFile(ctx Context) error {
 	ctx.Response().HdrCacheForever()
 	return ght.sendFile("application/x-git-packed-objects", ctx)
 }
 
-func (ght *GitHttpTransfer) getIdxFile(ctx Context) error {
+func (ght *GitHTTPTransfer) getIdxFile(ctx Context) error {
 	ctx.Response().HdrCacheForever()
 	return ght.sendFile("application/x-git-packed-objects-toc", ctx)
 }
 
-func (ght *GitHttpTransfer) getTextFile(ctx Context) error {
+func (ght *GitHTTPTransfer) getTextFile(ctx Context) error {
 	ctx.Response().HdrNocache()
 	return ght.sendFile("text/plain", ctx)
 }
 
-func (ght *GitHttpTransfer) sendFile(contentType string, ctx Context) error {
+func (ght *GitHTTPTransfer) sendFile(contentType string, ctx Context) error {
 	res, req, repoPath, filePath := ctx.Response(), ctx.Request(), ctx.RepoPath(), ctx.FilePath()
 	fileInfo, err := ght.Git.GetRequestFileInfo(repoPath, filePath)
 	if err != nil {

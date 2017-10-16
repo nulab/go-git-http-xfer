@@ -17,3 +17,5 @@
 .glide/
 
 vendor/
+
+*bin

@@ -17,9 +17,9 @@ type EndToEndTestParams struct {
 	gitBinPath     string
 	repoName       string
 	absRepoPath    string
-	remoteRepoUrl  string // remoteRepoURL
+	remoteRepoURL  string
 	workingDirPath string // Ex: output destination of git clone.
-	ght            *GitHttpTransfer
+	ght            *GitHTTPTransfer
 	ts             *httptest.Server
 }
 
@@ -41,12 +41,18 @@ func setupEndToEndTest(t *testing.T) error {
 	endToEndTestParams.gitBinPath = "/usr/bin/git"
 	endToEndTestParams.repoName = "e2e_test.git"
 
-	endToEndTestParams.ght = New(endToEndTestParams.gitRootPath, endToEndTestParams.gitBinPath, true, true)
-	endToEndTestParams.ght.Event.On(PrepareServiceRpcUpload, func(ctx Context) error {
+	ght, err := New(endToEndTestParams.gitRootPath, endToEndTestParams.gitBinPath, true, true, true)
+	if err != nil {
+		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
+		return err
+	}
+
+	endToEndTestParams.ght = ght
+	endToEndTestParams.ght.Event.On(PrepareServiceRPCUpload, func(ctx Context) error {
 		t.Log("prepare run service rpc upload.")
 		return nil
 	})
-	endToEndTestParams.ght.Event.On(PrepareServiceRpcReceive, func(ctx Context) error {
+	endToEndTestParams.ght.Event.On(PrepareServiceRPCReceive, func(ctx Context) error {
 		t.Log("prepare run service rpc receive.")
 		return nil
 	})
@@ -65,7 +71,7 @@ func setupEndToEndTest(t *testing.T) error {
 		return err
 	}
 
-	endToEndTestParams.remoteRepoUrl = endToEndTestParams.ts.URL + "/" + endToEndTestParams.repoName
+	endToEndTestParams.remoteRepoURL = endToEndTestParams.ts.URL + "/" + endToEndTestParams.repoName
 	tempDir, _ := ioutil.TempDir("", "githttptransfer")
 	endToEndTestParams.workingDirPath = tempDir
 	return nil
@@ -88,7 +94,7 @@ func Test_End_To_End_it_should_succeed_clone_and_push_and_fetch_and_log(t *testi
 	}
 	defer teardownEndToEndTest()
 
-	remoteRepoUrl := endToEndTestParams.remoteRepoUrl
+	remoteRepoUrl := endToEndTestParams.remoteRepoURL
 
 	destDirNameA := "test_a"
 	destDirNameB := "test_b"
@@ -154,7 +160,7 @@ func Test_End_To_End_it_should_succeed_request_to_get_info_refs(t *testing.T) {
 	}
 	defer teardownEndToEndTest()
 
-	res, err := http.Get(endToEndTestParams.remoteRepoUrl + "/info/refs")
+	res, err := http.Get(endToEndTestParams.remoteRepoURL + "/info/refs")
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
 		return
@@ -181,7 +187,7 @@ func Test_End_To_End_it_should_succeed_request_to_get_HEAD(t *testing.T) {
 	}
 	defer teardownEndToEndTest()
 
-	res, err := http.Get(endToEndTestParams.remoteRepoUrl + "/HEAD")
+	res, err := http.Get(endToEndTestParams.remoteRepoURL + "/HEAD")
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
 		return
@@ -207,7 +213,7 @@ func Test_End_To_End_it_should_succeed_request_to_loose_objects(t *testing.T) {
 	}
 	defer teardownEndToEndTest()
 
-	res, err := http.Get(endToEndTestParams.remoteRepoUrl + "/info/refs")
+	res, err := http.Get(endToEndTestParams.remoteRepoURL + "/info/refs")
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
 		return
@@ -234,7 +240,7 @@ func Test_End_To_End_it_should_succeed_request_to_loose_objects(t *testing.T) {
 		return
 	}
 
-	res, err = http.Get(endToEndTestParams.remoteRepoUrl + "/objects/" + m[1] + "/" + m[2])
+	res, err = http.Get(endToEndTestParams.remoteRepoURL + "/objects/" + m[1] + "/" + m[2])
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
 		return
@@ -247,7 +253,7 @@ func Test_End_To_End_it_should_succeed_request_to_loose_objects(t *testing.T) {
 
 }
 
-// Should succeed but check if not 404. Rename the test
+// TODO Should succeed but check if not 404. Rename the test
 func Test_End_To_End_it_should_succeed_request_to_get_info_packs(t *testing.T) {
 
 	if err := setupEndToEndTest(t); err != nil {
@@ -260,13 +266,13 @@ func Test_End_To_End_it_should_succeed_request_to_get_info_packs(t *testing.T) {
 		return
 	}
 
-	res, err := http.Get(endToEndTestParams.remoteRepoUrl + "/objects/info/packs")
+	res, err := http.Get(endToEndTestParams.remoteRepoURL + "/objects/info/packs")
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
 		return
 	}
 
-	if res.StatusCode != 200 { // http.StatusOK
+	if res.StatusCode != http.StatusOK {
 		url := res.Request.Host + res.Request.URL.RequestURI()
 		t.Errorf("StatusCode is not 200. result: %d, url: %s", res.StatusCode, url)
 		return
@@ -288,26 +294,26 @@ func Test_End_To_End_it_should_succeed_request_to_get_info_packs(t *testing.T) {
 		return
 	}
 
-	infoPacksUrl := endToEndTestParams.remoteRepoUrl + "/objects/pack/" + m[1] // infoPacksURL
-	res, err = http.Get(infoPacksUrl)
+	infoPacksURL := endToEndTestParams.remoteRepoURL + "/objects/pack/" + m[1]
+	res, err = http.Get(infoPacksURL)
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
 		return
 	}
 
-	if res.StatusCode != 200 { // http.StatusOK
-		t.Errorf("StatusCode is not 200. url: %s, result: %d", infoPacksUrl, res.StatusCode)
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("StatusCode is not 200. url: %s, result: %d", infoPacksURL, res.StatusCode)
 		return
 	}
 
-	res, err = http.Get(strings.Replace(infoPacksUrl, ".pack", ".idx", 1))
+	res, err = http.Get(strings.Replace(infoPacksURL, ".pack", ".idx", 1))
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
 		return
 	}
 
-	if res.StatusCode != 200 { // http.StatusOK
-		t.Errorf("StatusCode is not 200. url: %s, result: %d", infoPacksUrl, res.StatusCode)
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("StatusCode is not 200. url: %s, result: %d", infoPacksURL, res.StatusCode)
 		return
 	}
 
@@ -317,8 +323,7 @@ func Test_End_To_End_it_should_succeed_request_to_get_info_packs(t *testing.T) {
 		return
 	}
 
-	// http.StatusNotFound
-	if res.StatusCode != 404 { // http.StatusNotFound
+	if res.StatusCode != http.StatusNotFound {
 		t.Errorf("StatusCode is not 404. result: %d", res.StatusCode)
 		return
 	}

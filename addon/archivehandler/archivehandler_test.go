@@ -13,14 +13,18 @@ import (
 
 func Test_it_should_download_archive_repository(t *testing.T) {
 
-	_, err := exec.LookPath("git") // Can be merged in one statement
-	if err != nil {
+	if _, err := exec.LookPath("git"); err != nil {
 		t.Log("git is not found. so skip git archive test.")
 		return
 	}
 
-	ght := githttptransfer.New("/data/git", "/usr/bin/git", true, true)
-	ght.AddRoute(githttptransfer.NewRoute(
+	ght, err := githttptransfer.New("/data/git", "/usr/bin/git", true, true, true)
+	if err != nil {
+		t.Errorf("An instance could not be created. %s", err.Error())
+		return
+	}
+
+	ght.Router.Add(githttptransfer.NewRoute(
 		Method,
 		Pattern,
 		New(ght).HandlerFunc,
