@@ -25,7 +25,33 @@ var (
 	getIdxFile        = regexp.MustCompile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.idx$")
 )
 
-func New(gitRootPath, gitBinPath string, uploadPack, receivePack, dumbProto bool) (*GitHTTPTransfer, error) {
+type gitHTTPTransferOptions struct {
+	uploadPack bool
+	receivePack bool
+	dumbProto bool
+}
+
+type GitHTTPTransferOption func(*gitHTTPTransferOptions)
+
+func WithoutUploadPack() GitHTTPTransferOption {
+	return func(o *gitHTTPTransferOptions) {
+		o.uploadPack = false
+	}
+}
+
+func WithoutReceivePack() GitHTTPTransferOption {
+	return func(o *gitHTTPTransferOptions) {
+		o.receivePack = false
+	}
+}
+
+func WithoutDumbProto() GitHTTPTransferOption {
+	return func(o *gitHTTPTransferOptions) {
+		o.dumbProto = false
+	}
+}
+
+func New(gitRootPath, gitBinPath string, opts ...GitHTTPTransferOption) (*GitHTTPTransfer, error) {
 
 	if gitRootPath == "" {
 		cwd, err := os.Getwd()
@@ -35,7 +61,13 @@ func New(gitRootPath, gitBinPath string, uploadPack, receivePack, dumbProto bool
 		gitRootPath = cwd
 	}
 
-	git := newGit(gitRootPath, gitBinPath, uploadPack, receivePack)
+	ghtOpts := &gitHTTPTransferOptions{true, true, true}
+
+	for _, opt := range opts {
+		opt(ghtOpts)
+	}
+
+	git := newGit(gitRootPath, gitBinPath, ghtOpts.uploadPack, ghtOpts.receivePack)
 	router := newRouter()
 	event := newEvent()
 
@@ -44,7 +76,7 @@ func New(gitRootPath, gitBinPath string, uploadPack, receivePack, dumbProto bool
 	ght.Router.Add(NewRoute(http.MethodPost, serviceRPCReceive, ght.serviceRPCReceive))
 	ght.Router.Add(NewRoute(http.MethodGet, getInfoRefs, ght.getInfoRefs))
 
-	if dumbProto {
+	if ghtOpts.dumbProto {
 		ght.Router.Add(NewRoute(http.MethodGet, getHead, ght.getTextFile))
 		ght.Router.Add(NewRoute(http.MethodGet, getAlternates, ght.getTextFile))
 		ght.Router.Add(NewRoute(http.MethodGet, getHTTPAlternates, ght.getTextFile))

@@ -41,7 +41,7 @@ func setupEndToEndTest(t *testing.T) error {
 	endToEndTestParams.gitBinPath = "/usr/bin/git"
 	endToEndTestParams.repoName = "e2e_test.git"
 
-	ght, err := New(endToEndTestParams.gitRootPath, endToEndTestParams.gitBinPath, true, true, true)
+	ght, err := New(endToEndTestParams.gitRootPath, endToEndTestParams.gitBinPath)
 	if err != nil {
 		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
 		return err

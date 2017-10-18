@@ -19,7 +19,7 @@ func main() {
 	flag.IntVar(&port, "p", 5050, "port of git httpd server.")
 	flag.Parse()
 
-	ght, err := githttptransfer.New("/data/git", "/usr/bin/git", true, true, true)
+	ght, err := githttptransfer.New("/data/git", "/usr/bin/git")
 	if err != nil {
 		log.Fatalf("GitHTTPTransfer instance could not be created. %s", err.Error())
 		return

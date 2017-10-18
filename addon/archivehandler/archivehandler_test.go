@@ -18,7 +18,7 @@ func Test_it_should_download_archive_repository(t *testing.T) {
 		return
 	}
 
-	ght, err := githttptransfer.New("/data/git", "/usr/bin/git", true, true, true)
+	ght, err := githttptransfer.New("/data/git", "/usr/bin/git")
 	if err != nil {
 		t.Errorf("An instance could not be created. %s", err.Error())
 		return
