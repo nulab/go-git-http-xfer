@@ -50,7 +50,7 @@ import (
 
 func main() {
 	
-	ght, err := githttptransfer.New("/data/git", "/usr/bin/git", true, true, true)
+	ght, err := githttptransfer.New("/data/git", "/usr/bin/git")
 	if err != nil {
 		log.Fatalf("GitHTTPTransfer instance could not be created. %s", err.Error())
 		return
@@ -61,11 +61,24 @@ func main() {
 	}
 }
 ```
+You can add optional parameters to constructor function.
+* `WithoutUploadPack`: Disabled `git-upload-pack` command.
+* `WithoutReceivePack`: Disabled `git-receive-pack` command.
+* `WithoutDumbProto`: Disabled `dumb protocol` handling.
+```go
+	ght, err := githttptransfer.New(
+		"/data/git",
+		"/usr/bin/git",
+		githttptransfer.WithoutUploadPack(),
+		githttptransfer.WithoutReceivePack(),
+		githttptransfer.WithoutDumbProto(),
+	)
+```
 You can add some custom route.
 ``` go
 func main() {
 
-	ght, err := githttptransfer.New("/data/git", "/usr/bin/git", true, true, true)
+	ght, err := githttptransfer.New("/data/git", "/usr/bin/git")
 	if err != nil {
 		log.Fatalf("GitHTTPTransfer instance could not be created. %s", err.Error())
 		return
@@ -94,7 +107,7 @@ You can add some middleware.
 ``` go
 func main() {
 	
-	ght, err := githttptransfer.New("/data/git", "/usr/bin/git", true, true, true)
+	ght, err := githttptransfer.New("/data/git", "/usr/bin/git")
 	if err != nil {
 		log.Fatalf("GitHTTPTransfer instance could not be created. %s", err.Error())
 		return
@@ -123,7 +136,7 @@ import (
 )
 
 func main() {
-	ght, err := githttptransfer.New("/data/git", "/usr/bin/git", true, true, true)
+	ght, err := githttptransfer.New("/data/git", "/usr/bin/git")
 	if err != nil {
 		log.Fatalf("GitHTTPTransfer instance could not be created. %s", err.Error())
 		return
