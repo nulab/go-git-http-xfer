@@ -16,7 +16,7 @@ func Test_it_should_return_403_if_upload_pack_is_off(t *testing.T) {
 		log.Println("git is not found. so skip test.")
 	}
 
-	ght, err := New("/data/git", "/usr/bin/git", false, true, true)
+	ght, err := New("/data/git", "/usr/bin/git", WithoutUploadPack())
 	if err != nil {
 		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
 		return
@@ -51,7 +51,7 @@ func Test_it_should_return_403_if_receive_pack_is_off(t *testing.T) {
 		log.Println("git is not found. so skip test.")
 	}
 
-	ght, err := New("/data/git", "/usr/bin/git", true, false, true)
+	ght, err := New("/data/git", "/usr/bin/git", WithoutReceivePack())
 	if err != nil {
 		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
 		return
@@ -82,7 +82,7 @@ func Test_it_should_return_403_if_receive_pack_is_off(t *testing.T) {
 
 // TODO Could be converted to a table driven test with the next test
 func Test_GitSmartHttp_MatchRouting_should_match_git_upload_pack(t *testing.T) {
-	ght, err := New("", "/usr/bin/git", true, true, true)
+	ght, err := New("", "/usr/bin/git")
 	if err != nil {
 		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
 		return
@@ -108,7 +108,7 @@ func Test_GitSmartHttp_MatchRouting_should_match_git_upload_pack(t *testing.T) {
 
 func Test_GitSmartHttp_MatchRouting_should_not_match_if_http_method_is_different(t *testing.T) {
 	var err error
-	ght, err := New("", "/usr/bin/git", true, true, true)
+	ght, err := New("", "/usr/bin/git")
 	if err != nil {
 		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
 		return
@@ -129,7 +129,7 @@ func Test_GitSmartHttp_MatchRouting_should_not_match_if_http_method_is_different
 // TODO Could be converted to a table driven test
 // https://github.com/golang/go/wiki/TableDrivenTests
 func Test_GitSmartHttp_MatchRouting_should_match_get_info_refs(t *testing.T) {
-	ght, err := New("", "/usr/bin/git", true, true, true)
+	ght, err := New("", "/usr/bin/git")
 	if err != nil {
 		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
 		return
@@ -154,7 +154,7 @@ func Test_GitSmartHttp_MatchRouting_should_match_get_info_refs(t *testing.T) {
 }
 
 func Test_GitSmartHttp_MatchRouting_should_match_get_head(t *testing.T) {
-	ght, err := New("", "/usr/bin/git", true, true, true)
+	ght, err := New("", "/usr/bin/git")
 	if err != nil {
 		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
 		return
@@ -179,7 +179,7 @@ func Test_GitSmartHttp_MatchRouting_should_match_get_head(t *testing.T) {
 }
 
 func Test_GitSmartHttp_MatchRouting_should_match_get_alternates(t *testing.T) {
-	ght, err := New("", "/usr/bin/git", true, true, true)
+	ght, err := New("", "/usr/bin/git")
 	if err != nil {
 		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
 		return
@@ -204,7 +204,7 @@ func Test_GitSmartHttp_MatchRouting_should_match_get_alternates(t *testing.T) {
 }
 
 func Test_GitSmartHttp_MatchRouting_should_match_get_http_alternates(t *testing.T) {
-	ght, err := New("", "/usr/bin/git", true, true, true)
+	ght, err := New("", "/usr/bin/git")
 	if err != nil {
 		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
 		return
@@ -229,7 +229,7 @@ func Test_GitSmartHttp_MatchRouting_should_match_get_http_alternates(t *testing.
 }
 
 func Test_GitSmartHttp_MatchRouting_should_match_get_info_packs(t *testing.T) {
-	ght, err := New("", "/usr/bin/git", true, true, true)
+	ght, err := New("", "/usr/bin/git")
 	if err != nil {
 		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
 		return
@@ -254,7 +254,7 @@ func Test_GitSmartHttp_MatchRouting_should_match_get_info_packs(t *testing.T) {
 }
 
 func Test_GitSmartHttp_MatchRouting_should_match_get_loose_object(t *testing.T) {
-	ght, err := New("", "/usr/bin/git", true, true, true)
+	ght, err := New("", "/usr/bin/git")
 	if err != nil {
 		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
 		return
@@ -279,7 +279,7 @@ func Test_GitSmartHttp_MatchRouting_should_match_get_loose_object(t *testing.T) 
 }
 
 func Test_GitSmartHttp_MatchRouting_should_match_get_pack_file(t *testing.T) {
-	ght, err := New("", "/usr/bin/git", true, true, true)
+	ght, err := New("", "/usr/bin/git")
 	if err != nil {
 		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
 		return
@@ -304,7 +304,7 @@ func Test_GitSmartHttp_MatchRouting_should_match_get_pack_file(t *testing.T) {
 }
 
 func Test_GitSmartHttp_MatchRouting_should_match_get_idx_file(t *testing.T) {
-	ght, err := New("", "/usr/bin/git", true, true, true)
+	ght, err := New("", "/usr/bin/git")
 	if err != nil {
 		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
 		return
