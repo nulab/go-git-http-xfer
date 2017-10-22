@@ -10,72 +10,62 @@ import (
 
 // TODO Could be converted to a table driven test with the next test
 // https://github.com/golang/go/wiki/TableDrivenTests
-func Test_it_should_return_403_if_upload_pack_is_off(t *testing.T) {
+func Test_GitHTTPTransfer_GitHTTPTransferOption(t *testing.T) {
 
 	if _, err := exec.LookPath("git"); err != nil {
 		log.Println("git is not found. so skip test.")
 	}
 
-	ght, err := New("/data/git", "/usr/bin/git", WithoutUploadPack())
-	if err != nil {
-		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
-		return
+	tests := []struct {
+		description  string
+		url          string
+		contentsType string
+		expectedCode int
+		gitHTTPTransferOption GitHTTPTransferOption
+	}{
+		{
+			description:  "it should return 403 if upload-pack is off",
+			url:          "/test.git/git-upload-pack",
+			contentsType: "application/x-git-upload-pack-request",
+			expectedCode: 403,
+			gitHTTPTransferOption: WithoutUploadPack(),
+		},
+		{
+			description:  "it should return 403 if receive-pack is off",
+			url:          "/test.git/git-receive-pack",
+			contentsType: "application/x-git-receive-pack-request",
+			expectedCode: 403,
+			gitHTTPTransferOption: WithoutReceivePack(),
+		},
 	}
 
-	ts := httptest.NewServer(ght)
-	if ts == nil {
-		t.Error("test server is nil.")
-	}
-	defer ts.Close()
+	for _, tc := range tests {
 
-	res, err := http.Post(
-		ts.URL+"/test.git/git-upload-pack",
-		"application/x-git-upload-pack-request",
-		nil,
-	)
-	if err != nil {
-		t.Errorf("http.Post: %s", err.Error())
-		return
-	}
+		t.Log(tc.description)
 
-	if res.StatusCode != 403 {
-		t.Errorf("StatusCode is not 403. result: %d", res.StatusCode)
-		return
-	}
+		ght, err := New("/data/git", "/usr/bin/git", tc.gitHTTPTransferOption)
+		if err != nil {
+			t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
+		}
 
-}
+		ts := httptest.NewServer(ght)
+		if ts == nil {
+			t.Error("test server is nil.")
+		}
 
-func Test_it_should_return_403_if_receive_pack_is_off(t *testing.T) {
+		res, err := http.Post(
+			ts.URL+tc.url,
+			tc.contentsType,
+			nil,
+		)
+		if err != nil {
+			t.Errorf("http.Post: %s", err.Error())
+		}
 
-	if _, err := exec.LookPath("git"); err != nil {
-		log.Println("git is not found. so skip test.")
-	}
-
-	ght, err := New("/data/git", "/usr/bin/git", WithoutReceivePack())
-	if err != nil {
-		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
-		return
-	}
-
-	ts := httptest.NewServer(ght)
-	if ts == nil {
-		t.Error("test server is nil.")
-	}
-	defer ts.Close()
-
-	res, err := http.Post(
-		ts.URL+"/test.git/git-receive-pack",
-		"application/x-git-receive-pack-request",
-		nil,
-	)
-	if err != nil {
-		t.Errorf("http.Post: %s", err.Error())
-		return
-	}
-
-	if res.StatusCode != 403 {
-		t.Errorf("StatusCode is not 403. result: %d", res.StatusCode)
-		return
+		if res.StatusCode != tc.expectedCode {
+			t.Errorf("StatusCode is not %d. result: %d", tc.expectedCode, res.StatusCode)
+		}
+		ts.Close()
 	}
 
 }
