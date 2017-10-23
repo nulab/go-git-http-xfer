@@ -8,8 +8,6 @@ import (
 	"testing"
 )
 
-// TODO Could be converted to a table driven test with the next test
-// https://github.com/golang/go/wiki/TableDrivenTests
 func Test_GitHTTPTransfer_GitHTTPTransferOption(t *testing.T) {
 
 	if _, err := exec.LookPath("git"); err != nil {
@@ -70,33 +68,9 @@ func Test_GitHTTPTransfer_GitHTTPTransferOption(t *testing.T) {
 
 }
 
-// TODO Could be converted to a table driven test with the next test
-func Test_GitHTTPTransfer_MatchRouting_should_match_git_upload_pack(t *testing.T) {
-	ght, err := New("", "/usr/bin/git")
-	if err != nil {
-		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
-		return
-	}
-	m := http.MethodPost
-	p := "/base/foo/git-upload-pack"
-	expectedRepoPath := "/base/foo"
-	expectedFilePath := "git-upload-pack"
-	repoPath, filePath, _, err := ght.matchRouting(m, p)
-	if err != nil {
-		t.Errorf("error is %s", err.Error())
-		return
-	}
-	if repoPath != expectedRepoPath {
-		t.Errorf("repository path is not %s . result: %s", expectedRepoPath, repoPath)
-		return
-	}
-	if filePath != expectedFilePath {
-		t.Errorf("file path is not %s . result: %s", expectedFilePath, filePath)
-		return
-	}
-}
 
-func Test_GitHTTPTransfer_MatchRouting_should_not_match_if_http_method_is_different(t *testing.T) {
+func Test_GitHTTPTransfer_MatchRouting_should_not_match(t *testing.T) {
+	t.Log("it should not match if http method is different")
 	var err error
 	ght, err := New("", "/usr/bin/git")
 	if err != nil {
@@ -116,204 +90,100 @@ func Test_GitHTTPTransfer_MatchRouting_should_not_match_if_http_method_is_differ
 	}
 }
 
-// TODO Could be converted to a table driven test
-// https://github.com/golang/go/wiki/TableDrivenTests
-func Test_GitHTTPTransfer_MatchRouting_should_match_get_info_refs(t *testing.T) {
+func Test_GitHTTPTransfer_MatchRouting_should_match(t *testing.T) {
 	ght, err := New("", "/usr/bin/git")
 	if err != nil {
 		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
 		return
 	}
-	m := http.MethodGet
-	p := "/base/foo/info/refs"
-	expectedRepoPath := "/base/foo"
-	expectedFilePath := "info/refs"
-	repoPath, filePath, _, err := ght.matchRouting(m, p)
-	if err != nil {
-		t.Errorf("error is %s", err.Error())
-		return
+
+	tests := []struct {
+		description string
+		method string
+		path string
+		expectedRepoPath string
+		expectedFilePath string
+	}{
+		{
+			description: "it should match git-upload-pack",
+			method: http.MethodPost,
+			path: "/base/foo/git-upload-pack",
+			expectedRepoPath: "/base/foo",
+			expectedFilePath: "git-upload-pack",
+		},
+		{
+			description: "it should match get-info-refs",
+			method: http.MethodGet,
+			path: "/base/foo/info/refs",
+			expectedRepoPath: "/base/foo",
+			expectedFilePath : "info/refs",
+		},
+		{
+			description: "it should match get-head",
+			method: http.MethodGet,
+			path: "/base/foo/HEAD",
+			expectedRepoPath: "/base/foo",
+			expectedFilePath : "HEAD",
+		},
+		{
+			description: "it should match get-alternates",
+			method: http.MethodGet,
+			path: "/base/foo/objects/info/alternates",
+			expectedRepoPath: "/base/foo",
+			expectedFilePath : "objects/info/alternates",
+		},
+		{
+			description: "it should match get-http-alternates",
+			method: http.MethodGet,
+			path: "/base/foo/objects/info/http-alternates",
+			expectedRepoPath: "/base/foo",
+			expectedFilePath : "objects/info/http-alternates",
+		},
+		{
+			description: "it should match get-info-packs",
+			method: http.MethodGet,
+			path: "/base/foo/objects/info/packs",
+			expectedRepoPath: "/base/foo",
+			expectedFilePath : "objects/info/packs",
+		},
+		{
+			description: "it should match get-loose-object",
+			method: http.MethodGet,
+			path: "/base/foo/objects/3b/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacccccc",
+			expectedRepoPath: "/base/foo",
+			expectedFilePath : "objects/3b/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacccccc",
+		},
+		{
+			description: "it should match get-pack-file",
+			method: http.MethodGet,
+			path: "/base/foo/objects/pack/pack-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbb.pack",
+			expectedRepoPath: "/base/foo",
+			expectedFilePath : "objects/pack/pack-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbb.pack",
+		},
+		{
+			description: "it should match get-idx-file",
+			method: http.MethodGet,
+			path: "/base/foo/objects/pack/pack-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbb.idx",
+			expectedRepoPath: "/base/foo",
+			expectedFilePath : "objects/pack/pack-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbb.idx",
+		},
 	}
-	if repoPath != expectedRepoPath {
-		t.Errorf("repository path is not %s . result: %s", expectedRepoPath, repoPath)
-		return
-	}
-	if filePath != expectedFilePath {
-		t.Errorf("file path is not %s . result: %s", expectedFilePath, filePath)
-		return
+
+	for _, tc := range tests {
+		t.Log(tc.description)
+		repoPath, filePath, _, err := ght.matchRouting(tc.method, tc.path)
+		if err != nil {
+			t.Errorf("error is %s", err.Error())
+			return
+		}
+		if repoPath != tc.expectedRepoPath {
+			t.Errorf("repository path is not %s . result: %s", tc.expectedRepoPath, repoPath)
+			return
+		}
+		if filePath != tc.expectedFilePath {
+			t.Errorf("file path is not %s . result: %s", tc.expectedFilePath, filePath)
+			return
+		}
 	}
 }
 
-func Test_GitHTTPTransfer_MatchRouting_should_match_get_head(t *testing.T) {
-	ght, err := New("", "/usr/bin/git")
-	if err != nil {
-		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
-		return
-	}
-	m := http.MethodGet
-	p := "/base/foo/HEAD"
-	expectedRepoPath := "/base/foo"
-	expectedFilePath := "HEAD"
-	repoPath, filePath, _, err := ght.matchRouting(m, p)
-	if err != nil {
-		t.Errorf("error is %s", err.Error())
-		return
-	}
-	if repoPath != expectedRepoPath {
-		t.Errorf("repository path is not %s . result: %s", expectedRepoPath, repoPath)
-		return
-	}
-	if filePath != expectedFilePath {
-		t.Errorf("file path is not %s . result: %s", expectedFilePath, filePath)
-		return
-	}
-}
-
-func Test_GitHTTPTransfer_MatchRouting_should_match_get_alternates(t *testing.T) {
-	ght, err := New("", "/usr/bin/git")
-	if err != nil {
-		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
-		return
-	}
-	m := http.MethodGet
-	p := "/base/foo/objects/info/alternates"
-	expectedRepoPath := "/base/foo"
-	expectedFilePath := "objects/info/alternates"
-	repoPath, filePath, _, err := ght.matchRouting(m, p)
-	if err != nil {
-		t.Errorf("error is %s", err.Error())
-		return
-	}
-	if repoPath != expectedRepoPath {
-		t.Errorf("repository path is not %s . result: %s", expectedRepoPath, repoPath)
-		return
-	}
-	if filePath != expectedFilePath {
-		t.Errorf("file path is not %s . result: %s", expectedFilePath, filePath)
-		return
-	}
-}
-
-func Test_GitHTTPTransfer_MatchRouting_should_match_get_http_alternates(t *testing.T) {
-	ght, err := New("", "/usr/bin/git")
-	if err != nil {
-		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
-		return
-	}
-	m := http.MethodGet
-	p := "/base/foo/objects/info/http-alternates"
-	expectedRepoPath := "/base/foo"
-	expectedFilePath := "objects/info/http-alternates"
-	repoPath, filePath, _, err := ght.matchRouting(m, p)
-	if err != nil {
-		t.Errorf("error is %s", err.Error())
-		return
-	}
-	if repoPath != expectedRepoPath {
-		t.Errorf("repository path is not %s . result: %s", expectedRepoPath, repoPath)
-		return
-	}
-	if filePath != expectedFilePath {
-		t.Errorf("file path is not %s . result: %s", expectedFilePath, filePath)
-		return
-	}
-}
-
-func Test_GitHTTPTransfer_MatchRouting_should_match_get_info_packs(t *testing.T) {
-	ght, err := New("", "/usr/bin/git")
-	if err != nil {
-		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
-		return
-	}
-	m := http.MethodGet
-	p := "/base/foo/objects/info/packs"
-	expectedRepoPath := "/base/foo"
-	expectedFilePath := "objects/info/packs"
-	repoPath, filePath, _, err := ght.matchRouting(m, p)
-	if err != nil {
-		t.Errorf("error is %s", err.Error())
-		return
-	}
-	if repoPath != expectedRepoPath {
-		t.Errorf("repository path is not %s . result: %s", expectedRepoPath, repoPath)
-		return
-	}
-	if filePath != expectedFilePath {
-		t.Errorf("file path is not %s . result: %s", expectedFilePath, filePath)
-		return
-	}
-}
-
-func Test_GitHTTPTransfer_MatchRouting_should_match_get_loose_object(t *testing.T) {
-	ght, err := New("", "/usr/bin/git")
-	if err != nil {
-		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
-		return
-	}
-	m := http.MethodGet
-	p := "/base/foo/objects/3b/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacccccc"
-	expectedRepoPath := "/base/foo"
-	expectedFilePath := "objects/3b/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacccccc"
-	repoPath, filePath, _, err := ght.matchRouting(m, p)
-	if err != nil {
-		t.Errorf("error is %s", err.Error())
-		return
-	}
-	if repoPath != expectedRepoPath {
-		t.Errorf("repository path is not %s . result: %s", expectedRepoPath, repoPath)
-		return
-	}
-	if filePath != expectedFilePath {
-		t.Errorf("file path is not %s . result: %s", expectedFilePath, filePath)
-		return
-	}
-}
-
-func Test_GitHTTPTransfer_MatchRouting_should_match_get_pack_file(t *testing.T) {
-	ght, err := New("", "/usr/bin/git")
-	if err != nil {
-		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
-		return
-	}
-	m := http.MethodGet
-	p := "/base/foo/objects/pack/pack-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbb.pack"
-	expectedRepoPath := "/base/foo"
-	expectedFilePath := "objects/pack/pack-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbb.pack"
-	repoPath, filePath, _, err := ght.matchRouting(m, p)
-	if err != nil {
-		t.Errorf("error is %s", err.Error())
-		return
-	}
-	if repoPath != expectedRepoPath {
-		t.Errorf("repository path is not %s . result: %s", expectedRepoPath, repoPath)
-		return
-	}
-	if filePath != expectedFilePath {
-		t.Errorf("file path is not %s . result: %s", expectedFilePath, filePath)
-		return
-	}
-}
-
-func Test_GitHTTPTransfer_MatchRouting_should_match_get_idx_file(t *testing.T) {
-	ght, err := New("", "/usr/bin/git")
-	if err != nil {
-		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
-		return
-	}
-	m := http.MethodGet
-	p := "/base/foo/objects/pack/pack-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbb.idx"
-	expectedRepoPath := "/base/foo"
-	expectedFilePath := "objects/pack/pack-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbb.idx"
-	repoPath, filePath, _, err := ght.matchRouting(m, p)
-	if err != nil {
-		t.Errorf("error is %s", err.Error())
-		return
-	}
-	if repoPath != expectedRepoPath {
-		t.Errorf("repository path is not %s . result: %s", expectedRepoPath, repoPath)
-		return
-	}
-	if filePath != expectedFilePath {
-		t.Errorf("file path is not %s . result: %s", expectedFilePath, filePath)
-		return
-	}
-}
