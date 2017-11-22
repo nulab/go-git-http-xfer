@@ -25,32 +25,28 @@ func main() {
 		return
 	}
 
-	ght.Event.On(githttptransfer.PrepareServiceRPCUpload, func(ctx githttptransfer.Context) error {
+	ght.Event.On(githttptransfer.PrepareServiceRPCUpload, func(ctx githttptransfer.Context) {
 		// prepare run service rpc upload.
-		return nil
 	})
 
-	ght.Event.On(githttptransfer.PrepareServiceRPCReceive, func(ctx githttptransfer.Context) error {
+	ght.Event.On(githttptransfer.PrepareServiceRPCReceive, func(ctx githttptransfer.Context) {
 		// prepare run service rpc receive.
-		return nil
 	})
 
-	ght.Event.On(githttptransfer.AfterMatchRouting, func(ctx githttptransfer.Context) error {
+	ght.Event.On(githttptransfer.AfterMatchRouting, func(ctx githttptransfer.Context) {
 		// after match routing.
-		return nil
 	})
 
 	// You can add some custom route.
 	ght.Router.Add(githttptransfer.NewRoute(
 		http.MethodGet,
 		regexp.MustCompile("(.*?)/hello$"),
-		func(ctx githttptransfer.Context) error {
+		func(ctx githttptransfer.Context) {
 			resp, req := ctx.Response(), ctx.Request()
 			rp, fp := ctx.RepoPath(), ctx.FilePath()
 			fmt.Fprintf(resp.Writer,
 				"Hi there. URI: %s, RepoPath: %s, FilePath: %s",
 				req.URL.RequestURI(), rp, fp)
-			return nil
 		},
 	))
 

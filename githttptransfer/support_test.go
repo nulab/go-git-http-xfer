@@ -10,27 +10,27 @@ func Test_GetServiceType(t *testing.T) {
 
 	tests := []struct {
 		description string
-		method string
-		url string
-		expected string
+		method      string
+		url         string
+		expected    string
 	}{
 		{
 			description: "it should return upload-pack",
-			method: http.MethodPost,
-			url: "http://example.com/base/foo/git-upload-pack?service=git-upload-pack",
-			expected: "upload-pack",
+			method:      http.MethodPost,
+			url:         "http://example.com/base/foo/git-upload-pack?service=git-upload-pack",
+			expected:    "upload-pack",
 		},
 		{
 			description: "it should return receive-pack",
-			method: http.MethodPost,
-			url: "http://example.com/base/foo/git-upload-pack?service=git-receive-pack",
-			expected: "receive-pack",
+			method:      http.MethodPost,
+			url:         "http://example.com/base/foo/git-upload-pack?service=git-receive-pack",
+			expected:    "receive-pack",
 		},
 		{
 			description: "it should return empty",
-			method: http.MethodPost,
-			url: "http://example.com/base/foo/git-upload-pack?service=foo-receive-pack",
-			expected: "",
+			method:      http.MethodPost,
+			url:         "http://example.com/base/foo/git-upload-pack?service=foo-receive-pack",
+			expected:    "",
 		},
 	}
 

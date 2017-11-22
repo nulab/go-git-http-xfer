@@ -23,7 +23,7 @@ type ArchiveHandler struct {
 	*githttptransfer.GitHTTPTransfer
 }
 
-func (ght *ArchiveHandler) HandlerFunc(ctx githttptransfer.Context) error {
+func (ght *ArchiveHandler) HandlerFunc(ctx githttptransfer.Context) {
 
 	res, repoPath, filePath := ctx.Response(), ctx.RepoPath(), ctx.FilePath()
 
@@ -38,12 +38,14 @@ func (ght *ArchiveHandler) HandlerFunc(ctx githttptransfer.Context) error {
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return err
+		githttptransfer.RenderInternalServerError(res.Writer)
+		return
 	}
 	defer stdout.Close()
 
 	if err := cmd.Start(); err != nil {
-		return err
+		githttptransfer.RenderInternalServerError(res.Writer)
+		return
 	}
 
 	res.SetContentType("application/octet-stream")
@@ -51,10 +53,10 @@ func (ght *ArchiveHandler) HandlerFunc(ctx githttptransfer.Context) error {
 	res.Header().Add("Content-Transfer-Encoding", "binary")
 
 	if _, err := res.Copy(stdout); err != nil {
-		return err
+		githttptransfer.RenderInternalServerError(res.Writer)
+		return
 	}
 	if err := cmd.Wait(); err != nil {
-		return err
+		githttptransfer.RenderInternalServerError(res.Writer)
 	}
-	return nil
 }
