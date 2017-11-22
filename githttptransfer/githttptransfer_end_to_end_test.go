@@ -48,17 +48,14 @@ func setupEndToEndTest(t *testing.T) error {
 	}
 
 	endToEndTestParams.ght = ght
-	endToEndTestParams.ght.Event.On(PrepareServiceRPCUpload, func(ctx Context) error {
+	endToEndTestParams.ght.Event.On(PrepareServiceRPCUpload, func(ctx Context) {
 		t.Log("prepare run service rpc upload.")
-		return nil
 	})
-	endToEndTestParams.ght.Event.On(PrepareServiceRPCReceive, func(ctx Context) error {
+	endToEndTestParams.ght.Event.On(PrepareServiceRPCReceive, func(ctx Context) {
 		t.Log("prepare run service rpc receive.")
-		return nil
 	})
-	endToEndTestParams.ght.Event.On(AfterMatchRouting, func(ctx Context) error {
+	endToEndTestParams.ght.Event.On(AfterMatchRouting, func(ctx Context) {
 		t.Log("after match routing.")
-		return nil
 	})
 
 	endToEndTestParams.ts = httptest.NewServer(endToEndTestParams.ght)

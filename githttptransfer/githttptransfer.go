@@ -25,33 +25,33 @@ var (
 	getIdxFile        = regexp.MustCompile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.idx$")
 )
 
-type gitHTTPTransferOptions struct {
-	uploadPack bool
+type options struct {
+	uploadPack  bool
 	receivePack bool
-	dumbProto bool
+	dumbProto   bool
 }
 
-type GitHTTPTransferOption func(*gitHTTPTransferOptions)
+type Option func(*options)
 
-func WithoutUploadPack() GitHTTPTransferOption {
-	return func(o *gitHTTPTransferOptions) {
+func WithoutUploadPack() Option {
+	return func(o *options) {
 		o.uploadPack = false
 	}
 }
 
-func WithoutReceivePack() GitHTTPTransferOption {
-	return func(o *gitHTTPTransferOptions) {
+func WithoutReceivePack() Option {
+	return func(o *options) {
 		o.receivePack = false
 	}
 }
 
-func WithoutDumbProto() GitHTTPTransferOption {
-	return func(o *gitHTTPTransferOptions) {
+func WithoutDumbProto() Option {
+	return func(o *options) {
 		o.dumbProto = false
 	}
 }
 
-func New(gitRootPath, gitBinPath string, opts ...GitHTTPTransferOption) (*GitHTTPTransfer, error) {
+func New(gitRootPath, gitBinPath string, opts ...Option) (*GitHTTPTransfer, error) {
 
 	if gitRootPath == "" {
 		cwd, err := os.Getwd()
@@ -61,7 +61,7 @@ func New(gitRootPath, gitBinPath string, opts ...GitHTTPTransferOption) (*GitHTT
 		gitRootPath = cwd
 	}
 
-	ghtOpts := &gitHTTPTransferOptions{true, true, true}
+	ghtOpts := &options{true, true, true}
 
 	for _, opt := range opts {
 		opt(ghtOpts)
@@ -109,28 +109,14 @@ func (ght *GitHTTPTransfer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 	ctx := NewContext(rw, r, repoPath, filePath)
 
-	if err := ght.Event.emit(AfterMatchRouting, ctx); err != nil {
-		RenderInternalServerError(ctx.Response().Writer)
-		return
-	}
+	ght.Event.emit(AfterMatchRouting, ctx)
 
 	if !ght.Git.Exists(ctx.RepoPath()) {
 		RenderNotFound(ctx.Response().Writer)
 		return
 	}
 
-	if err := handler(ctx); err != nil {
-		if os.IsNotExist(err) {
-			RenderNotFound(ctx.Response().Writer)
-			return
-		}
-		switch err.(type) {
-		case *NoAccessError:
-			RenderNoAccess(ctx.Response().Writer)
-			return
-		}
-		RenderInternalServerError(ctx.Response().Writer)
-	}
+	handler(ctx)
 }
 
 func (ght *GitHTTPTransfer) matchRouting(method, path string) (repoPath string, filePath string, handler HandlerFunc, err error) {
@@ -144,11 +130,11 @@ func (ght *GitHTTPTransfer) matchRouting(method, path string) (repoPath string, 
 }
 
 const (
-	uploadPack  string = "upload-pack"
-	receivePack string = "receive-pack"
+	uploadPack  = "upload-pack"
+	receivePack = "receive-pack"
 )
 
-type HandlerFunc func(ctx Context) error
+type HandlerFunc func(ctx Context)
 
 func newEvent() *event {
 	return &event{map[EventKey]HandlerFunc{}}
@@ -166,38 +152,34 @@ type event struct {
 	listeners map[EventKey]HandlerFunc
 }
 
-func (e *event) emit(evt EventKey, ctx Context) error {
+func (e *event) emit(evt EventKey, ctx Context) {
 	v, ok := e.listeners[evt]
 	if ok {
-		return v(ctx)
+		v(ctx)
 	}
-	return nil
 }
 
 func (e *event) On(evt EventKey, listener HandlerFunc) {
 	e.listeners[evt] = listener
 }
 
-func (ght *GitHTTPTransfer) serviceRPCUpload(ctx Context) error {
-	if err := ght.Event.emit(PrepareServiceRPCUpload, ctx); err != nil {
-		return err
-	}
-	return ght.serviceRPC(ctx, uploadPack)
+func (ght *GitHTTPTransfer) serviceRPCUpload(ctx Context) {
+	ght.Event.emit(PrepareServiceRPCUpload, ctx)
+	ght.serviceRPC(ctx, uploadPack)
 }
 
-func (ght *GitHTTPTransfer) serviceRPCReceive(ctx Context) error {
-	if err := ght.Event.emit(PrepareServiceRPCReceive, ctx); err != nil {
-		return err
-	}
-	return ght.serviceRPC(ctx, receivePack)
+func (ght *GitHTTPTransfer) serviceRPCReceive(ctx Context) {
+	ght.Event.emit(PrepareServiceRPCReceive, ctx)
+	ght.serviceRPC(ctx, receivePack)
 }
 
-func (ght *GitHTTPTransfer) serviceRPC(ctx Context, rpc string) error {
+func (ght *GitHTTPTransfer) serviceRPC(ctx Context, rpc string) {
 
 	res, req, repoPath := ctx.Response(), ctx.Request(), ctx.RepoPath()
 
 	if !ght.Git.HasAccess(req, rpc, true) {
-		return &NoAccessError{Dir: ght.Git.GetAbsolutePath(repoPath)}
+		RenderNoAccess(ctx.Response().Writer)
+		return
 	}
 
 	var body io.ReadCloser
@@ -206,7 +188,8 @@ func (ght *GitHTTPTransfer) serviceRPC(ctx Context, rpc string) error {
 	if req.Header.Get("Content-Encoding") == "gzip" {
 		body, err = gzip.NewReader(req.Body)
 		if err != nil {
-			return err
+			RenderInternalServerError(ctx.Response().Writer)
+			return
 		}
 	} else {
 		body = req.Body
@@ -220,17 +203,19 @@ func (ght *GitHTTPTransfer) serviceRPC(ctx Context, rpc string) error {
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
-		return err
+		RenderInternalServerError(ctx.Response().Writer)
+		return
 	}
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return err
+		RenderInternalServerError(ctx.Response().Writer)
+		return
 	}
 
-	err = cmd.Start() // could be merged in one statement
-	if err != nil {
-		return err
+	if err = cmd.Start(); err != nil {
+		RenderInternalServerError(ctx.Response().Writer)
+		return
 	}
 
 	var wg sync.WaitGroup
@@ -250,23 +235,28 @@ func (ght *GitHTTPTransfer) serviceRPC(ctx Context, rpc string) error {
 
 	wg.Wait()
 
-	return cmd.Wait()
-
+	if err = cmd.Wait(); err != nil {
+		RenderInternalServerError(ctx.Response().Writer)
+		return
+	}
 }
 
-func (ght *GitHTTPTransfer) getInfoRefs(ctx Context) error {
+func (ght *GitHTTPTransfer) getInfoRefs(ctx Context) {
 	res, req, repoPath := ctx.Response(), ctx.Request(), ctx.RepoPath()
 
 	serviceName := getServiceType(req)
 	if !ght.Git.HasAccess(req, serviceName, false) {
 		ght.Git.UpdateServerInfo(repoPath)
 		res.HdrNocache()
-		return ght.sendFile("text/plain; charset=utf-8", ctx)
+		if err := ght.sendFile("text/plain; charset=utf-8", ctx); err != nil {
+			RenderNotFound(ctx.Response().Writer)
+		}
 	}
 
 	refs, err := ght.Git.GetInfoRefs(repoPath, serviceName)
 	if err != nil {
-		return err
+		RenderNotFound(ctx.Response().Writer)
+		return
 	}
 
 	res.HdrNocache()
@@ -275,33 +265,42 @@ func (ght *GitHTTPTransfer) getInfoRefs(ctx Context) error {
 	res.PktWrite("# service=git-" + serviceName + "\n")
 	res.PktFlush()
 	res.Write(refs)
-
-	return nil
 }
 
-func (ght *GitHTTPTransfer) getInfoPacks(ctx Context) error {
+func (ght *GitHTTPTransfer) getInfoPacks(ctx Context) {
 	ctx.Response().HdrCacheForever()
-	return ght.sendFile("text/plain; charset=utf-8", ctx)
+	if err := ght.sendFile("text/plain; charset=utf-8", ctx); err != nil {
+		RenderNotFound(ctx.Response().Writer)
+	}
 }
 
-func (ght *GitHTTPTransfer) getLooseObject(ctx Context) error {
+func (ght *GitHTTPTransfer) getLooseObject(ctx Context) {
 	ctx.Response().HdrCacheForever()
-	return ght.sendFile("application/x-git-loose-object", ctx)
+	if err := ght.sendFile("application/x-git-loose-object", ctx); err != nil {
+		RenderNotFound(ctx.Response().Writer)
+	}
 }
 
-func (ght *GitHTTPTransfer) getPackFile(ctx Context) error {
+func (ght *GitHTTPTransfer) getPackFile(ctx Context) {
 	ctx.Response().HdrCacheForever()
-	return ght.sendFile("application/x-git-packed-objects", ctx)
+	if err := ght.sendFile("application/x-git-packed-objects", ctx); err != nil {
+		RenderNotFound(ctx.Response().Writer)
+	}
+
 }
 
-func (ght *GitHTTPTransfer) getIdxFile(ctx Context) error {
+func (ght *GitHTTPTransfer) getIdxFile(ctx Context) {
 	ctx.Response().HdrCacheForever()
-	return ght.sendFile("application/x-git-packed-objects-toc", ctx)
+	if err := ght.sendFile("application/x-git-packed-objects-toc", ctx); err != nil {
+		RenderNotFound(ctx.Response().Writer)
+	}
 }
 
-func (ght *GitHTTPTransfer) getTextFile(ctx Context) error {
+func (ght *GitHTTPTransfer) getTextFile(ctx Context) {
 	ctx.Response().HdrNocache()
-	return ght.sendFile("text/plain", ctx)
+	if err := ght.sendFile("text/plain", ctx); err != nil {
+		RenderNotFound(ctx.Response().Writer)
+	}
 }
 
 func (ght *GitHTTPTransfer) sendFile(contentType string, ctx Context) error {
@@ -314,6 +313,5 @@ func (ght *GitHTTPTransfer) sendFile(contentType string, ctx Context) error {
 	res.SetContentLength(fmt.Sprintf("%d", fileInfo.Size()))
 	res.SetLastModified(fileInfo.ModTime().Format(http.TimeFormat))
 	http.ServeFile(res.Writer, req, fileInfo.AbsolutePath)
-
 	return nil
 }

@@ -15,24 +15,24 @@ func Test_GitHTTPTransfer_GitHTTPTransferOption(t *testing.T) {
 	}
 
 	tests := []struct {
-		description  string
-		url          string
-		contentsType string
-		expectedCode int
-		gitHTTPTransferOption GitHTTPTransferOption
+		description           string
+		url                   string
+		contentsType          string
+		expectedCode          int
+		gitHTTPTransferOption Option
 	}{
 		{
-			description:  "it should return 403 if upload-pack is off",
-			url:          "/test.git/git-upload-pack",
-			contentsType: "application/x-git-upload-pack-request",
-			expectedCode: 403,
+			description:           "it should return 403 if upload-pack is off",
+			url:                   "/test.git/git-upload-pack",
+			contentsType:          "application/x-git-upload-pack-request",
+			expectedCode:          403,
 			gitHTTPTransferOption: WithoutUploadPack(),
 		},
 		{
-			description:  "it should return 403 if receive-pack is off",
-			url:          "/test.git/git-receive-pack",
-			contentsType: "application/x-git-receive-pack-request",
-			expectedCode: 403,
+			description:           "it should return 403 if receive-pack is off",
+			url:                   "/test.git/git-receive-pack",
+			contentsType:          "application/x-git-receive-pack-request",
+			expectedCode:          403,
 			gitHTTPTransferOption: WithoutReceivePack(),
 		},
 	}
@@ -68,7 +68,6 @@ func Test_GitHTTPTransfer_GitHTTPTransferOption(t *testing.T) {
 
 }
 
-
 func Test_GitHTTPTransfer_MatchRouting_should_not_match(t *testing.T) {
 	t.Log("it should not match if http method is different")
 	var err error
@@ -98,74 +97,74 @@ func Test_GitHTTPTransfer_MatchRouting_should_match(t *testing.T) {
 	}
 
 	tests := []struct {
-		description string
-		method string
-		path string
+		description      string
+		method           string
+		path             string
 		expectedRepoPath string
 		expectedFilePath string
 	}{
 		{
-			description: "it should match git-upload-pack",
-			method: http.MethodPost,
-			path: "/base/foo/git-upload-pack",
+			description:      "it should match git-upload-pack",
+			method:           http.MethodPost,
+			path:             "/base/foo/git-upload-pack",
 			expectedRepoPath: "/base/foo",
 			expectedFilePath: "git-upload-pack",
 		},
 		{
-			description: "it should match get-info-refs",
-			method: http.MethodGet,
-			path: "/base/foo/info/refs",
+			description:      "it should match get-info-refs",
+			method:           http.MethodGet,
+			path:             "/base/foo/info/refs",
 			expectedRepoPath: "/base/foo",
-			expectedFilePath : "info/refs",
+			expectedFilePath: "info/refs",
 		},
 		{
-			description: "it should match get-head",
-			method: http.MethodGet,
-			path: "/base/foo/HEAD",
+			description:      "it should match get-head",
+			method:           http.MethodGet,
+			path:             "/base/foo/HEAD",
 			expectedRepoPath: "/base/foo",
-			expectedFilePath : "HEAD",
+			expectedFilePath: "HEAD",
 		},
 		{
-			description: "it should match get-alternates",
-			method: http.MethodGet,
-			path: "/base/foo/objects/info/alternates",
+			description:      "it should match get-alternates",
+			method:           http.MethodGet,
+			path:             "/base/foo/objects/info/alternates",
 			expectedRepoPath: "/base/foo",
-			expectedFilePath : "objects/info/alternates",
+			expectedFilePath: "objects/info/alternates",
 		},
 		{
-			description: "it should match get-http-alternates",
-			method: http.MethodGet,
-			path: "/base/foo/objects/info/http-alternates",
+			description:      "it should match get-http-alternates",
+			method:           http.MethodGet,
+			path:             "/base/foo/objects/info/http-alternates",
 			expectedRepoPath: "/base/foo",
-			expectedFilePath : "objects/info/http-alternates",
+			expectedFilePath: "objects/info/http-alternates",
 		},
 		{
-			description: "it should match get-info-packs",
-			method: http.MethodGet,
-			path: "/base/foo/objects/info/packs",
+			description:      "it should match get-info-packs",
+			method:           http.MethodGet,
+			path:             "/base/foo/objects/info/packs",
 			expectedRepoPath: "/base/foo",
-			expectedFilePath : "objects/info/packs",
+			expectedFilePath: "objects/info/packs",
 		},
 		{
-			description: "it should match get-loose-object",
-			method: http.MethodGet,
-			path: "/base/foo/objects/3b/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacccccc",
+			description:      "it should match get-loose-object",
+			method:           http.MethodGet,
+			path:             "/base/foo/objects/3b/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacccccc",
 			expectedRepoPath: "/base/foo",
-			expectedFilePath : "objects/3b/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacccccc",
+			expectedFilePath: "objects/3b/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacccccc",
 		},
 		{
-			description: "it should match get-pack-file",
-			method: http.MethodGet,
-			path: "/base/foo/objects/pack/pack-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbb.pack",
+			description:      "it should match get-pack-file",
+			method:           http.MethodGet,
+			path:             "/base/foo/objects/pack/pack-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbb.pack",
 			expectedRepoPath: "/base/foo",
-			expectedFilePath : "objects/pack/pack-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbb.pack",
+			expectedFilePath: "objects/pack/pack-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbb.pack",
 		},
 		{
-			description: "it should match get-idx-file",
-			method: http.MethodGet,
-			path: "/base/foo/objects/pack/pack-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbb.idx",
+			description:      "it should match get-idx-file",
+			method:           http.MethodGet,
+			path:             "/base/foo/objects/pack/pack-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbb.idx",
 			expectedRepoPath: "/base/foo",
-			expectedFilePath : "objects/pack/pack-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbb.idx",
+			expectedFilePath: "objects/pack/pack-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbb.idx",
 		},
 	}
 
@@ -186,4 +185,3 @@ func Test_GitHTTPTransfer_MatchRouting_should_match(t *testing.T) {
 		}
 	}
 }
-

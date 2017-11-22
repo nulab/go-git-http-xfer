@@ -62,9 +62,9 @@ func main() {
 }
 ```
 You can add optional parameters to constructor function.
-* `WithoutUploadPack`: Disabled `git-upload-pack` command.
-* `WithoutReceivePack`: Disabled `git-receive-pack` command.
-* `WithoutDumbProto`: Disabled `dumb protocol` handling.
+* `WithoutUploadPack` : Disable `git-upload-pack` command.
+* `WithoutReceivePack`: Disable `git-receive-pack` command.
+* `WithoutDumbProto`  : Disable `dumb protocol` handling.
 ```go
 	ght, err := githttptransfer.New(
 		"/data/git",
@@ -88,13 +88,12 @@ func main() {
 	ght.Router.Add(githttptransfer.NewRoute(
 		http.MethodGet,
 		regexp.MustCompile("(.*?)/hello$"),
-		func(ctx githttptransfer.Context) error {
+		func(ctx githttptransfer.Context) {
 			resp, req := ctx.Response(), ctx.Request()
 			rp, fp := ctx.RepoPath(), ctx.FilePath()
 			fmt.Fprintf(resp.Writer,
 				"Hi there. URI: %s, RepoPath: %s, FilePath: %s",
 				req.URL.RequestURI(), rp, fp)
-			return nil
 		},
 	))
 	

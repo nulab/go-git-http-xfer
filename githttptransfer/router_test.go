@@ -11,15 +11,13 @@ func Test_Router_Append_should_append_route(t *testing.T) {
 	router.Add(&Route{
 		http.MethodPost,
 		regexp.MustCompile("(.*?)/foo"),
-		func(ctx Context) error {
-			return nil
-		}})
+		func(ctx Context) {},
+	})
 	router.Add(&Route{
 		http.MethodPost,
 		regexp.MustCompile("(.*?)/bar"),
-		func(ctx Context) error {
-			return nil
-		}})
+		func(ctx Context) {},
+	})
 	length := len(router.routes)
 	expected := 2
 	if expected != length {
@@ -32,9 +30,8 @@ func Test_Router_Match_should_match_route(t *testing.T) {
 	router.Add(&Route{
 		http.MethodPost,
 		regexp.MustCompile("(.*?)/foo"),
-		func(ctx Context) error {
-			return nil
-		}})
+		func(ctx Context) {},
+	})
 	match, route, err := router.Match(http.MethodPost, "/base/foo")
 	if err != nil {
 		t.Errorf("error is %s", err.Error())
@@ -55,9 +52,8 @@ func Test_Router_Match_should_return_UrlNotFound_error(t *testing.T) {
 	router.Add(&Route{
 		http.MethodPost,
 		regexp.MustCompile("(.*?)/foo"),
-		func(ctx Context) error {
-			return nil
-		}})
+		func(ctx Context) {},
+	})
 	match, route, err := router.Match(http.MethodPost, "/base/hoge")
 	if err == nil {
 		t.Error("error is nil.")
@@ -80,9 +76,8 @@ func Test_Router_Match_should_return_MethodNotAllowed_error(t *testing.T) {
 	router.Add(&Route{
 		http.MethodPost,
 		regexp.MustCompile("(.*?)/foo"),
-		func(ctx Context) error {
-			return nil
-		}})
+		func(ctx Context) {},
+	})
 	match, route, err := router.Match(http.MethodGet, "/base/foo")
 	if err == nil {
 		t.Error("error is nil.")
