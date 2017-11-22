@@ -87,7 +87,13 @@ func main() {
 	// You can add some custom route.
 	ght.Router.Add(githttptransfer.NewRoute(
 		http.MethodGet,
-		regexp.MustCompile("(.*?)/hello$"),
+		func (path string) (match string) {
+			suffix := "/hello"
+			if strings.HasSuffix(path, suffix) {
+				match = suffix
+			}
+			return
+		},
 		func(ctx githttptransfer.Context) {
 			resp, req := ctx.Response(), ctx.Request()
 			rp, fp := ctx.RepoPath(), ctx.FilePath()

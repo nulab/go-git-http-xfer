@@ -11,8 +11,14 @@ import (
 )
 
 var (
-	Pattern = regexp.MustCompile("(.*?)/archive/.*?\\.(zip|tar)$")
-	Method  = http.MethodGet
+	r       = regexp.MustCompile(".*?(/archive/.*?\\.(zip|tar))$")
+	Pattern = func(path string) (match string) {
+		if m := r.FindStringSubmatch(path); m != nil {
+			match = m[1]
+		}
+		return
+	}
+	Method = http.MethodGet
 )
 
 func New(ght *githttptransfer.GitHTTPTransfer) *ArchiveHandler {
