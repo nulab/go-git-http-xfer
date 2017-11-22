@@ -19,4 +19,3 @@ type MethodNotAllowedError struct {
 func (e *MethodNotAllowedError) Error() string {
 	return fmt.Sprintf("Method Not Allowed: Method %s, Path %s", e.Method, e.Path)
 }
-

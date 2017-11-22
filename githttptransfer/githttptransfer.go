@@ -12,18 +12,63 @@ import (
 )
 
 var (
-	serviceRPCUpload  = regexp.MustCompile("(.*?)/git-upload-pack$")
-	serviceRPCReceive = regexp.MustCompile("(.*?)/git-receive-pack$")
-	getInfoRefs       = regexp.MustCompile("(.*?)/info/refs$")
-	getHead           = regexp.MustCompile("(.*?)/HEAD$")
-	getAlternates     = regexp.MustCompile("(.*?)/objects/info/alternates$")
-	getHTTPAlternates = regexp.MustCompile("(.*?)/objects/info/http-alternates$")
-	getInfoPacks      = regexp.MustCompile("(.*?)/objects/info/packs$")
-	getInfoFile       = regexp.MustCompile("(.*?)/objects/info/[^/]*$")
-	getLooseObject    = regexp.MustCompile("(.*?)/objects/[0-9a-f]{2}/[0-9a-f]{38}$")
-	getPackFile       = regexp.MustCompile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.pack$")
-	getIdxFile        = regexp.MustCompile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.idx$")
+	serviceRPCUpload = func(path string) (match string) {
+		return hasSuffix(path, "/git-upload-pack")
+	}
+	serviceRPCReceive = func(path string) (match string) {
+		return hasSuffix(path, "/git-receive-pack")
+	}
+
+	getInfoRefs = func(path string) (match string) {
+		return hasSuffix(path, "/info/refs")
+	}
+
+	getHead = func(path string) (match string) {
+		return hasSuffix(path, "/HEAD")
+	}
+
+	getAlternates = func(path string) (match string) {
+		return hasSuffix(path, "/objects/info/alternates")
+	}
+
+	getHTTPAlternates = func(path string) (match string) {
+		return hasSuffix(path, "/objects/info/http-alternates")
+	}
+
+	getInfoPacks = func(path string) (match string) {
+		return hasSuffix(path, "/objects/info/packs")
+	}
+
+	getInfoFile = func(path string) (match string) {
+		return findStringSubmatch(path, regexp.MustCompile(".*?(/objects/info/[^/]*)$"))
+	}
+
+	getLooseObject = func(path string) (match string) {
+		return findStringSubmatch(path, regexp.MustCompile(".*?(/objects/[0-9a-f]{2}/[0-9a-f]{38})$"))
+	}
+
+	getPackFile = func(path string) (match string) {
+		return findStringSubmatch(path, regexp.MustCompile(".*?(/objects/pack/pack-[0-9a-f]{40}\\.pack)$"))
+	}
+
+	getIdxFile = func(path string) (match string) {
+		return findStringSubmatch(path, regexp.MustCompile(".*?(/objects/pack/pack-[0-9a-f]{40}\\.idx)$"))
+	}
 )
+
+func hasSuffix(path, suffix string) (match string) {
+	if strings.HasSuffix(path, suffix) {
+		match = suffix
+	}
+	return
+}
+
+func findStringSubmatch(path string, prefix *regexp.Regexp) (match string) {
+	if m := prefix.FindStringSubmatch(path); m != nil {
+		match = m[1]
+	}
+	return
+}
 
 type options struct {
 	uploadPack  bool
@@ -72,7 +117,9 @@ func New(gitRootPath, gitBinPath string, opts ...Option) (*GitHTTPTransfer, erro
 	event := newEvent()
 
 	ght := &GitHTTPTransfer{git, router, event}
+
 	ght.Router.Add(NewRoute(http.MethodPost, serviceRPCUpload, ght.serviceRPCUpload))
+
 	ght.Router.Add(NewRoute(http.MethodPost, serviceRPCReceive, ght.serviceRPCReceive))
 	ght.Router.Add(NewRoute(http.MethodGet, getInfoRefs, ght.getInfoRefs))
 
@@ -122,7 +169,7 @@ func (ght *GitHTTPTransfer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 func (ght *GitHTTPTransfer) matchRouting(method, path string) (repoPath string, filePath string, handler HandlerFunc, err error) {
 	match, route, err := ght.Router.Match(method, path)
 	if err == nil {
-		repoPath = match[1]
+		repoPath = strings.Replace(path, match, "", 1)
 		filePath = strings.Replace(path, repoPath+"/", "", 1)
 		handler = route.Handler
 	}

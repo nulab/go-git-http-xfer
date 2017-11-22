@@ -2,7 +2,6 @@ package githttptransfer
 
 import (
 	"net/http"
-	"regexp"
 	"testing"
 )
 
@@ -10,12 +9,16 @@ func Test_Router_Append_should_append_route(t *testing.T) {
 	router := &router{}
 	router.Add(&Route{
 		http.MethodPost,
-		regexp.MustCompile("(.*?)/foo"),
+		func(path string) (match string) {
+			return hasSuffix(path, "/foo")
+		},
 		func(ctx Context) {},
 	})
 	router.Add(&Route{
 		http.MethodPost,
-		regexp.MustCompile("(.*?)/bar"),
+		func(path string) (match string) {
+			return hasSuffix(path, "/bar")
+		},
 		func(ctx Context) {},
 	})
 	length := len(router.routes)
@@ -29,7 +32,9 @@ func Test_Router_Match_should_match_route(t *testing.T) {
 	router := &router{}
 	router.Add(&Route{
 		http.MethodPost,
-		regexp.MustCompile("(.*?)/foo"),
+		func(path string) (match string) {
+			return hasSuffix(path, "/foo")
+		},
 		func(ctx Context) {},
 	})
 	match, route, err := router.Match(http.MethodPost, "/base/foo")
@@ -39,11 +44,8 @@ func Test_Router_Match_should_match_route(t *testing.T) {
 	if http.MethodPost != route.Method {
 		t.Errorf("http method is not %s . result: %s", http.MethodPost, route.Method)
 	}
-	if "/base/foo" != match[0] {
-		t.Errorf("match index 0 is not %s . result: %s", "/base/foo", match[0])
-	}
-	if "/base" != match[1] {
-		t.Errorf("match index 1 is not %s . result: %s", "/base", match[1])
+	if "/foo" != match {
+		t.Errorf("match is not %s . result: %s", "/foo", match)
 	}
 }
 
@@ -51,15 +53,17 @@ func Test_Router_Match_should_return_UrlNotFound_error(t *testing.T) {
 	router := &router{}
 	router.Add(&Route{
 		http.MethodPost,
-		regexp.MustCompile("(.*?)/foo"),
+		func(path string) (match string) {
+			return hasSuffix(path, "/foo")
+		},
 		func(ctx Context) {},
 	})
 	match, route, err := router.Match(http.MethodPost, "/base/hoge")
 	if err == nil {
 		t.Error("error is nil.")
 	}
-	if match != nil {
-		t.Error("match is not nil.")
+	if match != "" {
+		t.Error("match is not empty.")
 	}
 	if route != nil {
 		t.Error("route is not nil.")
@@ -75,15 +79,17 @@ func Test_Router_Match_should_return_MethodNotAllowed_error(t *testing.T) {
 	router := &router{}
 	router.Add(&Route{
 		http.MethodPost,
-		regexp.MustCompile("(.*?)/foo"),
+		func(path string) (match string) {
+			return hasSuffix(path, "/foo")
+		},
 		func(ctx Context) {},
 	})
 	match, route, err := router.Match(http.MethodGet, "/base/foo")
 	if err == nil {
 		t.Error("error is nil.")
 	}
-	if match != nil {
-		t.Error("match is not nil.")
+	if match != "" {
+		t.Error("match is not empty.")
 	}
 	if route != nil {
 		t.Error("route is not nil.")
