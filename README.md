@@ -1,4 +1,4 @@
-# go-git-http-transfer [![Build Status](https://travis-ci.org/vvatanabe/go-git-http-transfer.svg?branch=master)](https://travis-ci.org/vvatanabe/go-git-http-transfer) [![Coverage Status](https://coveralls.io/repos/github/vvatanabe/go-git-http-transfer/badge.svg?branch=master)](https://coveralls.io/github/vvatanabe/go-git-http-transfer?branch=master)
+# go-git-http-xfer [![Build Status](https://travis-ci.org/vvatanabe/go-git-http-xfer.svg?branch=master)](https://travis-ci.org/vvatanabe/go-git-http-xfer) [![Coverage Status](https://coveralls.io/repos/github/vvatanabe/go-git-http-xfer/badge.svg?branch=master)](https://coveralls.io/github/vvatanabe/go-git-http-xfer?branch=master)
 
 Implements Git HTTP Transport.
 
@@ -16,12 +16,12 @@ Implements Git HTTP Transport.
 Let's clone this repository and execute the following commands.
 
 ```` zsh
-$ docker build -t git-http-transfer-build .
-$ docker run -it --rm -v $PWD:/go/src/github.com/vvatanabe/go-git-http-transfer \
-    -p 8080:8080 git-http-transfer-build bash
+$ docker build -t git-http-xfer .
+$ docker run -it --rm -v $PWD:/go/src/github.com/vvatanabe/go-git-http-xfer \
+    -p 8080:8080 git-http-xfer bash
 
 # in container
-$ go run /go/src/github.com/vvatanabe/go-git-http-transfer/example/main.go -p 8080
+$ go run /go/src/github.com/vvatanabe/go-git-http-xfer/example/main.go -p 8080
 
 # in your local machine
 $ git clone http://localhost:8080/example.git
@@ -32,7 +32,7 @@ $ git clone http://localhost:8080/example.git
 This package can be installed with the go get command:
 
 ``` zsh
-$ go get github.com/vvatanabe/go-git-http-transfer
+$ go get github.com/vvatanabe/go-git-http-xfer
 ```
 
 ## Usage
@@ -45,18 +45,18 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/vvatanabe/go-git-http-transfer/githttptransfer"
+	"github.com/vvatanabe/go-git-http-xfer/githttpxfer"
 )
 
 func main() {
 	
-	ght, err := githttptransfer.New("/data/git", "/usr/bin/git")
+	ghx, err := githttpxfer.New("/data/git", "/usr/bin/git")
 	if err != nil {
-		log.Fatalf("GitHTTPTransfer instance could not be created. %s", err.Error())
+		log.Fatalf("GitHTTPXfer instance could not be created. %s", err.Error())
 		return
 	}
 	
-	if err := http.ListenAndServe(":8080", ght); err != nil {
+	if err := http.ListenAndServe(":8080", ghx); err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
 }
@@ -66,26 +66,26 @@ You can add optional parameters to constructor function.
 * `WithoutReceivePack`: Disable `git-receive-pack` command.
 * `WithoutDumbProto`  : Disable `dumb protocol` handling.
 ```go
-	ght, err := githttptransfer.New(
+	ghx, err := githttpxfer.New(
 		"/data/git",
 		"/usr/bin/git",
-		githttptransfer.WithoutUploadPack(),
-		githttptransfer.WithoutReceivePack(),
-		githttptransfer.WithoutDumbProto(),
+		githttpxfer.WithoutUploadPack(),
+		githttpxfer.WithoutReceivePack(),
+		githttpxfer.WithoutDumbProto(),
 	)
 ```
 You can add some custom route.
 ``` go
 func main() {
 
-	ght, err := githttptransfer.New("/data/git", "/usr/bin/git")
+	ghx, err := githttpxfer.New("/data/git", "/usr/bin/git")
 	if err != nil {
-		log.Fatalf("GitHTTPTransfer instance could not be created. %s", err.Error())
+		log.Fatalf("GitHTTPXfer instance could not be created. %s", err.Error())
 		return
 	}
 
 	// You can add some custom route.
-	ght.Router.Add(githttptransfer.NewRoute(
+	ghx.Router.Add(githttpxfer.NewRoute(
 		http.MethodGet,
 		func (path string) (match string) {
 			suffix := "/hello"
@@ -94,7 +94,7 @@ func main() {
 			}
 			return
 		},
-		func(ctx githttptransfer.Context) {
+		func(ctx githttpxfer.Context) {
 			resp, req := ctx.Response(), ctx.Request()
 			rp, fp := ctx.RepoPath(), ctx.FilePath()
 			fmt.Fprintf(resp.Writer,
@@ -103,7 +103,7 @@ func main() {
 		},
 	))
 	
-	if err := http.ListenAndServe(":8080", ght); err != nil {
+	if err := http.ListenAndServe(":8080", ghx); err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
 }
@@ -112,15 +112,15 @@ You can add some middleware.
 ``` go
 func main() {
 	
-	ght, err := githttptransfer.New("/data/git", "/usr/bin/git")
+	ghx, err := githttpxfer.New("/data/git", "/usr/bin/git")
 	if err != nil {
-		log.Fatalf("GitHTTPTransfer instance could not be created. %s", err.Error())
+		log.Fatalf("GitHTTPXfer instance could not be created. %s", err.Error())
 		return
 	}
 	
-	handler := Logging(ght)
+	handler := Logging(ghx)
 	
-	if err := http.ListenAndServe(":8080", ght); err != nil {
+	if err := http.ListenAndServe(":8080", ghx); err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
 }
@@ -137,23 +137,23 @@ func Logging(next http.Handler) http.Handler {
 You can add some addon handler. (git archive)
 ``` go
 import (
-	"github.com/vvatanabe/go-git-http-transfer/addon/archivehandler"
+	"github.com/vvatanabe/go-git-http-xfer/addon/archivehandler"
 )
 
 func main() {
-	ght, err := githttptransfer.New("/data/git", "/usr/bin/git")
+	ghx, err := githttpxfer.New("/data/git", "/usr/bin/git")
 	if err != nil {
-		log.Fatalf("GitHTTPTransfer instance could not be created. %s", err.Error())
+		log.Fatalf("GitHTTPXfer instance could not be created. %s", err.Error())
 		return
 	}
 	
-	ght.Router.Add(githttptransfer.NewRoute(
+	ghx.Router.Add(githttpxfer.NewRoute(
 		archivehandler.Method,
 		archivehandler.Pattern,
-		archivehandler.New(ght).HandlerFunc,
+		archivehandler.New(ghx).HandlerFunc,
 	))
 	
-	if err := http.ListenAndServe(":8080", ght); err != nil {
+	if err := http.ListenAndServe(":8080", ghx); err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
 }

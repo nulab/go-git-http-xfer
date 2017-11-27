@@ -1,4 +1,4 @@
-package githttptransfer
+package githttpxfer
 
 import "fmt"
 

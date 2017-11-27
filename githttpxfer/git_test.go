@@ -1,4 +1,4 @@
-package githttptransfer
+package githttpxfer
 
 import (
 	"io/ioutil"
@@ -10,7 +10,7 @@ import (
 
 func Test_Git_getRequestFileInfo_should_return_RequestFileInfo(t *testing.T) {
 
-	gitRootPath, err := ioutil.TempDir("", "githttptransfer")
+	gitRootPath, err := ioutil.TempDir("", "githttpxfer")
 	if err != nil {
 		t.Errorf("Create Temp Dir error: %s", err.Error())
 		return
@@ -40,7 +40,7 @@ func Test_Git_getRequestFileInfo_should_return_RequestFileInfo(t *testing.T) {
 
 func Test_Git_getRequestFileInfo_should_not_return_RequestFileInfo(t *testing.T) {
 
-	gitRootPath, err := ioutil.TempDir("", "githttptransfer")
+	gitRootPath, err := ioutil.TempDir("", "githttpxfer")
 	if err != nil {
 		t.Errorf("Create Temp Dir error: %s", err.Error())
 		return
@@ -60,7 +60,7 @@ func Test_Git_getRequestFileInfo_should_not_return_RequestFileInfo(t *testing.T)
 
 func Test_Git_exists_should_return_true_if_exists_repository(t *testing.T) {
 
-	gitRootPath, err := ioutil.TempDir("", "githttptransfer")
+	gitRootPath, err := ioutil.TempDir("", "githttpxfer")
 	if err != nil {
 		t.Errorf("Create Temp Dir error: %s", err.Error())
 		return
@@ -81,7 +81,7 @@ func Test_Git_exists_should_return_true_if_exists_repository(t *testing.T) {
 
 func Test_Git_exists_should_return_false_if_not_exists_repository(t *testing.T) {
 
-	gitRootPath, err := ioutil.TempDir("", "githttptransfer")
+	gitRootPath, err := ioutil.TempDir("", "githttpxfer")
 	if err != nil {
 		t.Errorf("Create Temp Dir error: %s", err.Error())
 		return
@@ -100,7 +100,7 @@ func Test_Git_exists_should_return_false_if_not_exists_repository(t *testing.T) 
 
 func Test_Git_getAbsolutePath_should_return_absolute_path_of_git_repository(t *testing.T) {
 
-	gitRootPath, err := ioutil.TempDir("", "githttptransfer")
+	gitRootPath, err := ioutil.TempDir("", "githttpxfer")
 	if err != nil {
 		t.Errorf("Create Temp Dir error: %s", err.Error())
 		return

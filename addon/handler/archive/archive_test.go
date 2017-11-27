@@ -8,7 +8,7 @@ import (
 	"path"
 	"testing"
 
-	"github.com/vvatanabe/go-git-http-transfer/githttptransfer"
+	"github.com/vvatanabe/go-git-http-xfer/githttpxfer"
 )
 
 func Test_it_should_download_archive_repository(t *testing.T) {
@@ -18,26 +18,26 @@ func Test_it_should_download_archive_repository(t *testing.T) {
 		return
 	}
 
-	ght, err := githttptransfer.New("/data/git", "/usr/bin/git")
+	ghx, err := githttpxfer.New("/data/git", "/usr/bin/git")
 	if err != nil {
 		t.Errorf("An instance could not be created. %s", err.Error())
 		return
 	}
 
-	ght.Router.Add(githttptransfer.NewRoute(
+	ghx.Router.Add(githttpxfer.NewRoute(
 		Method,
 		Pattern,
-		New(ght).Archive,
+		New(ghx).Archive,
 	))
 
-	ts := httptest.NewServer(ght)
+	ts := httptest.NewServer(ghx)
 	if ts == nil {
 		t.Error("test server is nil.")
 	}
 	defer ts.Close()
 
 	repoName := "archive_test.git"
-	absRepoPath := ght.Git.GetAbsolutePath(repoName)
+	absRepoPath := ghx.Git.GetAbsolutePath(repoName)
 	os.Mkdir(absRepoPath, os.ModeDir)
 
 	if _, err := execCmd(absRepoPath, "git", "init", "--bare", "--shared"); err != nil {
@@ -47,7 +47,7 @@ func Test_it_should_download_archive_repository(t *testing.T) {
 
 	remoteRepoUrl := ts.URL + "/" + repoName
 
-	tempDir, _ := ioutil.TempDir("", "gitsmarthttp")
+	tempDir, _ := ioutil.TempDir("", "git-http-xfer")
 	dir := "archive_test"
 	destDir := path.Join(tempDir, dir)
 

@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/vvatanabe/go-git-http-transfer/githttptransfer"
+	"github.com/vvatanabe/go-git-http-xfer/githttpxfer"
 )
 
 var (
@@ -21,15 +21,15 @@ var (
 	Method = http.MethodGet
 )
 
-func New(ght *githttptransfer.GitHTTPTransfer) *gitHTTPTransfer {
-	return &gitHTTPTransfer{ght}
+func New(ghx *githttpxfer.GitHTTPXfer) *gitHTTPXfer {
+	return &gitHTTPXfer{ghx}
 }
 
-type gitHTTPTransfer struct {
-	*githttptransfer.GitHTTPTransfer
+type gitHTTPXfer struct {
+	*githttpxfer.GitHTTPXfer
 }
 
-func (ght *gitHTTPTransfer) Archive(ctx githttptransfer.Context) {
+func (ghx *gitHTTPXfer) Archive(ctx githttpxfer.Context) {
 
 	res, repoPath, filePath := ctx.Response(), ctx.RepoPath(), ctx.FilePath()
 
@@ -40,17 +40,17 @@ func (ght *gitHTTPTransfer) Archive(ctx githttptransfer.Context) {
 	format := strings.Replace(ext, ".", "", 1)
 
 	args := []string{"archive", "--format=" + format, "--prefix=" + repoName + "-" + tree + "/", tree}
-	cmd := ght.Git.GitCommand(repoPath, args...)
+	cmd := ghx.Git.GitCommand(repoPath, args...)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		githttptransfer.RenderInternalServerError(res.Writer)
+		githttpxfer.RenderInternalServerError(res.Writer)
 		return
 	}
 	defer stdout.Close()
 
 	if err := cmd.Start(); err != nil {
-		githttptransfer.RenderInternalServerError(res.Writer)
+		githttpxfer.RenderInternalServerError(res.Writer)
 		return
 	}
 
@@ -59,10 +59,10 @@ func (ght *gitHTTPTransfer) Archive(ctx githttptransfer.Context) {
 	res.Header().Add("Content-Transfer-Encoding", "binary")
 
 	if _, err := res.Copy(stdout); err != nil {
-		githttptransfer.RenderInternalServerError(res.Writer)
+		githttpxfer.RenderInternalServerError(res.Writer)
 		return
 	}
 	if err := cmd.Wait(); err != nil {
-		githttptransfer.RenderInternalServerError(res.Writer)
+		githttpxfer.RenderInternalServerError(res.Writer)
 	}
 }

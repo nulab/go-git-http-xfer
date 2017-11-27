@@ -10,8 +10,8 @@ import (
 
 	"strings"
 
-	"github.com/vvatanabe/go-git-http-transfer/addon/handler/archive"
-	"github.com/vvatanabe/go-git-http-transfer/githttptransfer"
+	"github.com/vvatanabe/go-git-http-xfer/addon/handler/archive"
+	"github.com/vvatanabe/go-git-http-xfer/githttpxfer"
 )
 
 func main() {
@@ -20,26 +20,26 @@ func main() {
 	flag.IntVar(&port, "p", 5050, "port of git httpd server.")
 	flag.Parse()
 
-	ght, err := githttptransfer.New("/data/git", "/usr/bin/git")
+	ghx, err := githttpxfer.New("/data/git", "/usr/bin/git")
 	if err != nil {
-		log.Fatal("GitHTTPTransfer instance could not be created.", err)
+		log.Fatal("GitHTTPXfer instance could not be created.", err)
 		return
 	}
 
-	ght.Event.On(githttptransfer.PrepareServiceRPCUpload, func(ctx githttptransfer.Context) {
+	ghx.Event.On(githttpxfer.PrepareServiceRPCUpload, func(ctx githttpxfer.Context) {
 		// prepare run service rpc upload.
 	})
 
-	ght.Event.On(githttptransfer.PrepareServiceRPCReceive, func(ctx githttptransfer.Context) {
+	ghx.Event.On(githttpxfer.PrepareServiceRPCReceive, func(ctx githttpxfer.Context) {
 		// prepare run service rpc receive.
 	})
 
-	ght.Event.On(githttptransfer.AfterMatchRouting, func(ctx githttptransfer.Context) {
+	ghx.Event.On(githttpxfer.AfterMatchRouting, func(ctx githttpxfer.Context) {
 		// after match routing.
 	})
 
 	// You can add some custom route.
-	ght.Router.Add(githttptransfer.NewRoute(
+	ghx.Router.Add(githttpxfer.NewRoute(
 		http.MethodGet,
 		func(path string) (match string) {
 			suffix := "/hello"
@@ -48,7 +48,7 @@ func main() {
 			}
 			return
 		},
-		func(ctx githttptransfer.Context) {
+		func(ctx githttpxfer.Context) {
 			resp, req := ctx.Response(), ctx.Request()
 			rp, fp := ctx.RepoPath(), ctx.FilePath()
 			fmt.Fprintf(resp.Writer,
@@ -58,14 +58,14 @@ func main() {
 	))
 
 	// You can add some addon handler. (git archive)
-	ght.Router.Add(githttptransfer.NewRoute(
+	ghx.Router.Add(githttpxfer.NewRoute(
 		archive.Method,
 		archive.Pattern,
-		archive.New(ght).Archive,
+		archive.New(ghx).Archive,
 	))
 
 	// You can add some middleware.
-	handler := Logging(ght)
+	handler := Logging(ghx)
 
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", port), handler); err != nil {
 		log.Fatal("ListenAndServe: ", err)

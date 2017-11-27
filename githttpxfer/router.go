@@ -1,4 +1,4 @@
-package githttptransfer
+package githttpxfer
 
 type router struct {
 	routes []*Route

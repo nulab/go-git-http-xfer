@@ -1,4 +1,4 @@
-package githttptransfer
+package githttpxfer
 
 import (
 	"io/ioutil"
@@ -19,7 +19,7 @@ type EndToEndTestParams struct {
 	absRepoPath    string
 	remoteRepoURL  string
 	workingDirPath string // Ex: output destination of git clone.
-	ght            *GitHTTPTransfer
+	ghx            *GitHTTPXfer
 	ts             *httptest.Server
 }
 
@@ -41,26 +41,26 @@ func setupEndToEndTest(t *testing.T) error {
 	endToEndTestParams.gitBinPath = "/usr/bin/git"
 	endToEndTestParams.repoName = "e2e_test.git"
 
-	ght, err := New(endToEndTestParams.gitRootPath, endToEndTestParams.gitBinPath)
+	ghx, err := New(endToEndTestParams.gitRootPath, endToEndTestParams.gitBinPath)
 	if err != nil {
-		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
+		t.Errorf("GitHTTPXfer instance could not be created. %s", err.Error())
 		return err
 	}
 
-	endToEndTestParams.ght = ght
-	endToEndTestParams.ght.Event.On(PrepareServiceRPCUpload, func(ctx Context) {
+	endToEndTestParams.ghx = ghx
+	endToEndTestParams.ghx.Event.On(PrepareServiceRPCUpload, func(ctx Context) {
 		t.Log("prepare run service rpc upload.")
 	})
-	endToEndTestParams.ght.Event.On(PrepareServiceRPCReceive, func(ctx Context) {
+	endToEndTestParams.ghx.Event.On(PrepareServiceRPCReceive, func(ctx Context) {
 		t.Log("prepare run service rpc receive.")
 	})
-	endToEndTestParams.ght.Event.On(AfterMatchRouting, func(ctx Context) {
+	endToEndTestParams.ghx.Event.On(AfterMatchRouting, func(ctx Context) {
 		t.Log("after match routing.")
 	})
 
-	endToEndTestParams.ts = httptest.NewServer(endToEndTestParams.ght)
+	endToEndTestParams.ts = httptest.NewServer(endToEndTestParams.ghx)
 
-	endToEndTestParams.absRepoPath = endToEndTestParams.ght.Git.GetAbsolutePath(endToEndTestParams.repoName)
+	endToEndTestParams.absRepoPath = endToEndTestParams.ghx.Git.GetAbsolutePath(endToEndTestParams.repoName)
 	os.Mkdir(endToEndTestParams.absRepoPath, os.ModeDir)
 
 	if _, err := execCmd(endToEndTestParams.absRepoPath, "git", "init", "--bare", "--shared"); err != nil {
@@ -69,7 +69,7 @@ func setupEndToEndTest(t *testing.T) error {
 	}
 
 	endToEndTestParams.remoteRepoURL = endToEndTestParams.ts.URL + "/" + endToEndTestParams.repoName
-	tempDir, _ := ioutil.TempDir("", "githttptransfer")
+	tempDir, _ := ioutil.TempDir("", "githttpxfer")
 	endToEndTestParams.workingDirPath = tempDir
 	return nil
 }

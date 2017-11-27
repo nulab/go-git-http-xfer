@@ -1,4 +1,4 @@
-package githttptransfer
+package githttpxfer
 
 import (
 	"compress/gzip"
@@ -40,22 +40,22 @@ var (
 	}
 
 	getInfoFileRegexp = regexp.MustCompile(".*?(/objects/info/[^/]*)$")
-	getInfoFile = func(path string) (match string) {
+	getInfoFile       = func(path string) (match string) {
 		return findStringSubmatch(path, getInfoFileRegexp)
 	}
 
 	getLooseObjectRegexp = regexp.MustCompile(".*?(/objects/[0-9a-f]{2}/[0-9a-f]{38})$")
-	getLooseObject = func(path string) (match string) {
+	getLooseObject       = func(path string) (match string) {
 		return findStringSubmatch(path, getLooseObjectRegexp)
 	}
 
 	getPackFileRegexp = regexp.MustCompile(".*?(/objects/pack/pack-[0-9a-f]{40}\\.pack)$")
-	getPackFile = func(path string) (match string) {
+	getPackFile       = func(path string) (match string) {
 		return findStringSubmatch(path, getPackFileRegexp)
 	}
 
 	getIdxFileRegexp = regexp.MustCompile(".*?(/objects/pack/pack-[0-9a-f]{40}\\.idx)$")
-	getIdxFile = func(path string) (match string) {
+	getIdxFile       = func(path string) (match string) {
 		return findStringSubmatch(path, getIdxFileRegexp)
 	}
 )
@@ -100,7 +100,7 @@ func WithoutDumbProto() Option {
 	}
 }
 
-func New(gitRootPath, gitBinPath string, opts ...Option) (*GitHTTPTransfer, error) {
+func New(gitRootPath, gitBinPath string, opts ...Option) (*GitHTTPXfer, error) {
 
 	if gitRootPath == "" {
 		cwd, err := os.Getwd()
@@ -110,44 +110,44 @@ func New(gitRootPath, gitBinPath string, opts ...Option) (*GitHTTPTransfer, erro
 		gitRootPath = cwd
 	}
 
-	ghtOpts := &options{true, true, true}
+	ghxOpts := &options{true, true, true}
 
 	for _, opt := range opts {
-		opt(ghtOpts)
+		opt(ghxOpts)
 	}
 
-	git := newGit(gitRootPath, gitBinPath, ghtOpts.uploadPack, ghtOpts.receivePack)
+	git := newGit(gitRootPath, gitBinPath, ghxOpts.uploadPack, ghxOpts.receivePack)
 	router := newRouter()
 	event := newEvent()
 
-	ght := &GitHTTPTransfer{git, router, event}
+	ghx := &GitHTTPXfer{git, router, event}
 
-	ght.Router.Add(NewRoute(http.MethodPost, serviceRPCUpload, ght.serviceRPCUpload))
-	ght.Router.Add(NewRoute(http.MethodPost, serviceRPCReceive, ght.serviceRPCReceive))
-	ght.Router.Add(NewRoute(http.MethodGet, getInfoRefs, ght.getInfoRefs))
+	ghx.Router.Add(NewRoute(http.MethodPost, serviceRPCUpload, ghx.serviceRPCUpload))
+	ghx.Router.Add(NewRoute(http.MethodPost, serviceRPCReceive, ghx.serviceRPCReceive))
+	ghx.Router.Add(NewRoute(http.MethodGet, getInfoRefs, ghx.getInfoRefs))
 
-	if ghtOpts.dumbProto {
-		ght.Router.Add(NewRoute(http.MethodGet, getHead, ght.getTextFile))
-		ght.Router.Add(NewRoute(http.MethodGet, getAlternates, ght.getTextFile))
-		ght.Router.Add(NewRoute(http.MethodGet, getHTTPAlternates, ght.getTextFile))
-		ght.Router.Add(NewRoute(http.MethodGet, getInfoPacks, ght.getInfoPacks))
-		ght.Router.Add(NewRoute(http.MethodGet, getInfoFile, ght.getTextFile))
-		ght.Router.Add(NewRoute(http.MethodGet, getLooseObject, ght.getLooseObject))
-		ght.Router.Add(NewRoute(http.MethodGet, getPackFile, ght.getPackFile))
-		ght.Router.Add(NewRoute(http.MethodGet, getIdxFile, ght.getIdxFile))
+	if ghxOpts.dumbProto {
+		ghx.Router.Add(NewRoute(http.MethodGet, getHead, ghx.getTextFile))
+		ghx.Router.Add(NewRoute(http.MethodGet, getAlternates, ghx.getTextFile))
+		ghx.Router.Add(NewRoute(http.MethodGet, getHTTPAlternates, ghx.getTextFile))
+		ghx.Router.Add(NewRoute(http.MethodGet, getInfoPacks, ghx.getInfoPacks))
+		ghx.Router.Add(NewRoute(http.MethodGet, getInfoFile, ghx.getTextFile))
+		ghx.Router.Add(NewRoute(http.MethodGet, getLooseObject, ghx.getLooseObject))
+		ghx.Router.Add(NewRoute(http.MethodGet, getPackFile, ghx.getPackFile))
+		ghx.Router.Add(NewRoute(http.MethodGet, getIdxFile, ghx.getIdxFile))
 	}
-	return ght, nil
+	return ghx, nil
 }
 
-type GitHTTPTransfer struct {
+type GitHTTPXfer struct {
 	Git    *git
 	Router *router
 	Event  *event
 }
 
-func (ght *GitHTTPTransfer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (ghx *GitHTTPXfer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
-	repoPath, filePath, handler, err := ght.matchRouting(r.Method, r.URL.Path)
+	repoPath, filePath, handler, err := ghx.matchRouting(r.Method, r.URL.Path)
 	switch err.(type) {
 	case *URLNotFoundError:
 		RenderNotFound(rw)
@@ -159,9 +159,9 @@ func (ght *GitHTTPTransfer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 	ctx := NewContext(rw, r, repoPath, filePath)
 
-	ght.Event.emit(AfterMatchRouting, ctx)
+	ghx.Event.emit(AfterMatchRouting, ctx)
 
-	if !ght.Git.Exists(ctx.RepoPath()) {
+	if !ghx.Git.Exists(ctx.RepoPath()) {
 		RenderNotFound(ctx.Response().Writer)
 		return
 	}
@@ -169,8 +169,8 @@ func (ght *GitHTTPTransfer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	handler(ctx)
 }
 
-func (ght *GitHTTPTransfer) matchRouting(method, path string) (repoPath string, filePath string, handler HandlerFunc, err error) {
-	match, route, err := ght.Router.Match(method, path)
+func (ghx *GitHTTPXfer) matchRouting(method, path string) (repoPath string, filePath string, handler HandlerFunc, err error) {
+	match, route, err := ghx.Router.Match(method, path)
 	if err == nil {
 		repoPath = strings.Replace(path, match, "", 1)
 		filePath = strings.Replace(path, repoPath+"/", "", 1)
@@ -213,21 +213,21 @@ func (e *event) On(evt EventKey, listener HandlerFunc) {
 	e.listeners[evt] = listener
 }
 
-func (ght *GitHTTPTransfer) serviceRPCUpload(ctx Context) {
-	ght.Event.emit(PrepareServiceRPCUpload, ctx)
-	ght.serviceRPC(ctx, uploadPack)
+func (ghx *GitHTTPXfer) serviceRPCUpload(ctx Context) {
+	ghx.Event.emit(PrepareServiceRPCUpload, ctx)
+	ghx.serviceRPC(ctx, uploadPack)
 }
 
-func (ght *GitHTTPTransfer) serviceRPCReceive(ctx Context) {
-	ght.Event.emit(PrepareServiceRPCReceive, ctx)
-	ght.serviceRPC(ctx, receivePack)
+func (ghx *GitHTTPXfer) serviceRPCReceive(ctx Context) {
+	ghx.Event.emit(PrepareServiceRPCReceive, ctx)
+	ghx.serviceRPC(ctx, receivePack)
 }
 
-func (ght *GitHTTPTransfer) serviceRPC(ctx Context, rpc string) {
+func (ghx *GitHTTPXfer) serviceRPC(ctx Context, rpc string) {
 
 	res, req, repoPath := ctx.Response(), ctx.Request(), ctx.RepoPath()
 
-	if !ght.Git.HasAccess(req, rpc, true) {
+	if !ghx.Git.HasAccess(req, rpc, true) {
 		RenderNoAccess(ctx.Response().Writer)
 		return
 	}
@@ -249,7 +249,7 @@ func (ght *GitHTTPTransfer) serviceRPC(ctx Context, rpc string) {
 	res.SetContentType(fmt.Sprintf("application/x-git-%s-result", rpc))
 
 	args := []string{rpc, "--stateless-rpc", "."}
-	cmd := ght.Git.GitCommand(repoPath, args...)
+	cmd := ghx.Git.GitCommand(repoPath, args...)
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -290,19 +290,19 @@ func (ght *GitHTTPTransfer) serviceRPC(ctx Context, rpc string) {
 	}
 }
 
-func (ght *GitHTTPTransfer) getInfoRefs(ctx Context) {
+func (ghx *GitHTTPXfer) getInfoRefs(ctx Context) {
 	res, req, repoPath := ctx.Response(), ctx.Request(), ctx.RepoPath()
 
 	serviceName := getServiceType(req)
-	if !ght.Git.HasAccess(req, serviceName, false) {
-		ght.Git.UpdateServerInfo(repoPath)
+	if !ghx.Git.HasAccess(req, serviceName, false) {
+		ghx.Git.UpdateServerInfo(repoPath)
 		res.HdrNocache()
-		if err := ght.sendFile("text/plain; charset=utf-8", ctx); err != nil {
+		if err := ghx.sendFile("text/plain; charset=utf-8", ctx); err != nil {
 			RenderNotFound(ctx.Response().Writer)
 		}
 	}
 
-	refs, err := ght.Git.GetInfoRefs(repoPath, serviceName)
+	refs, err := ghx.Git.GetInfoRefs(repoPath, serviceName)
 	if err != nil {
 		RenderNotFound(ctx.Response().Writer)
 		return
@@ -316,45 +316,45 @@ func (ght *GitHTTPTransfer) getInfoRefs(ctx Context) {
 	res.Write(refs)
 }
 
-func (ght *GitHTTPTransfer) getInfoPacks(ctx Context) {
+func (ghx *GitHTTPXfer) getInfoPacks(ctx Context) {
 	ctx.Response().HdrCacheForever()
-	if err := ght.sendFile("text/plain; charset=utf-8", ctx); err != nil {
+	if err := ghx.sendFile("text/plain; charset=utf-8", ctx); err != nil {
 		RenderNotFound(ctx.Response().Writer)
 	}
 }
 
-func (ght *GitHTTPTransfer) getLooseObject(ctx Context) {
+func (ghx *GitHTTPXfer) getLooseObject(ctx Context) {
 	ctx.Response().HdrCacheForever()
-	if err := ght.sendFile("application/x-git-loose-object", ctx); err != nil {
+	if err := ghx.sendFile("application/x-git-loose-object", ctx); err != nil {
 		RenderNotFound(ctx.Response().Writer)
 	}
 }
 
-func (ght *GitHTTPTransfer) getPackFile(ctx Context) {
+func (ghx *GitHTTPXfer) getPackFile(ctx Context) {
 	ctx.Response().HdrCacheForever()
-	if err := ght.sendFile("application/x-git-packed-objects", ctx); err != nil {
+	if err := ghx.sendFile("application/x-git-packed-objects", ctx); err != nil {
 		RenderNotFound(ctx.Response().Writer)
 	}
 
 }
 
-func (ght *GitHTTPTransfer) getIdxFile(ctx Context) {
+func (ghx *GitHTTPXfer) getIdxFile(ctx Context) {
 	ctx.Response().HdrCacheForever()
-	if err := ght.sendFile("application/x-git-packed-objects-toc", ctx); err != nil {
+	if err := ghx.sendFile("application/x-git-packed-objects-toc", ctx); err != nil {
 		RenderNotFound(ctx.Response().Writer)
 	}
 }
 
-func (ght *GitHTTPTransfer) getTextFile(ctx Context) {
+func (ghx *GitHTTPXfer) getTextFile(ctx Context) {
 	ctx.Response().HdrNocache()
-	if err := ght.sendFile("text/plain", ctx); err != nil {
+	if err := ghx.sendFile("text/plain", ctx); err != nil {
 		RenderNotFound(ctx.Response().Writer)
 	}
 }
 
-func (ght *GitHTTPTransfer) sendFile(contentType string, ctx Context) error {
+func (ghx *GitHTTPXfer) sendFile(contentType string, ctx Context) error {
 	res, req, repoPath, filePath := ctx.Response(), ctx.Request(), ctx.RepoPath(), ctx.FilePath()
-	fileInfo, err := ght.Git.GetRequestFileInfo(repoPath, filePath)
+	fileInfo, err := ghx.Git.GetRequestFileInfo(repoPath, filePath)
 	if err != nil {
 		return err
 	}

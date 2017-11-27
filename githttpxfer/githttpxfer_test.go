@@ -1,4 +1,4 @@
-package githttptransfer
+package githttpxfer
 
 import (
 	"log"
@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func Test_GitHTTPTransfer_GitHTTPTransferOption(t *testing.T) {
+func Test_GitHTTPXfer_GitHTTPXferOption(t *testing.T) {
 
 	if _, err := exec.LookPath("git"); err != nil {
 		log.Println("git is not found. so skip test.")
@@ -19,21 +19,21 @@ func Test_GitHTTPTransfer_GitHTTPTransferOption(t *testing.T) {
 		url                   string
 		contentsType          string
 		expectedCode          int
-		gitHTTPTransferOption Option
+		gitHTTPXferOption Option
 	}{
 		{
 			description:           "it should return 403 if upload-pack is off",
 			url:                   "/test.git/git-upload-pack",
 			contentsType:          "application/x-git-upload-pack-request",
 			expectedCode:          403,
-			gitHTTPTransferOption: WithoutUploadPack(),
+			gitHTTPXferOption: WithoutUploadPack(),
 		},
 		{
 			description:           "it should return 403 if receive-pack is off",
 			url:                   "/test.git/git-receive-pack",
 			contentsType:          "application/x-git-receive-pack-request",
 			expectedCode:          403,
-			gitHTTPTransferOption: WithoutReceivePack(),
+			gitHTTPXferOption: WithoutReceivePack(),
 		},
 	}
 
@@ -41,12 +41,12 @@ func Test_GitHTTPTransfer_GitHTTPTransferOption(t *testing.T) {
 
 		t.Log(tc.description)
 
-		ght, err := New("/data/git", "/usr/bin/git", tc.gitHTTPTransferOption)
+		ghx, err := New("/data/git", "/usr/bin/git", tc.gitHTTPXferOption)
 		if err != nil {
-			t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
+			t.Errorf("GitHTTPXfer instance could not be created. %s", err.Error())
 		}
 
-		ts := httptest.NewServer(ght)
+		ts := httptest.NewServer(ghx)
 		if ts == nil {
 			t.Error("test server is nil.")
 		}
@@ -68,17 +68,17 @@ func Test_GitHTTPTransfer_GitHTTPTransferOption(t *testing.T) {
 
 }
 
-func Test_GitHTTPTransfer_MatchRouting_should_not_match(t *testing.T) {
+func Test_GitHTTPXfer_MatchRouting_should_not_match(t *testing.T) {
 	t.Log("it should not match if http method is different")
 	var err error
-	ght, err := New("", "/usr/bin/git")
+	ghx, err := New("", "/usr/bin/git")
 	if err != nil {
-		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
+		t.Errorf("GitHTTPXfer instance could not be created. %s", err.Error())
 		return
 	}
 	m := http.MethodGet
 	p := "/base/foo/git-upload-pack"
-	_, _, _, err = ght.matchRouting(m, p)
+	_, _, _, err = ghx.matchRouting(m, p)
 	if err == nil {
 		t.Error("Allowed.")
 		return
@@ -89,10 +89,10 @@ func Test_GitHTTPTransfer_MatchRouting_should_not_match(t *testing.T) {
 	}
 }
 
-func Test_GitHTTPTransfer_MatchRouting_should_match(t *testing.T) {
-	ght, err := New("", "/usr/bin/git")
+func Test_GitHTTPXfer_MatchRouting_should_match(t *testing.T) {
+	ghx, err := New("", "/usr/bin/git")
 	if err != nil {
-		t.Errorf("GitHTTPTransfer instance could not be created. %s", err.Error())
+		t.Errorf("GitHTTPXfer instance could not be created. %s", err.Error())
 		return
 	}
 
@@ -170,7 +170,7 @@ func Test_GitHTTPTransfer_MatchRouting_should_match(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Log(tc.description)
-		repoPath, filePath, _, err := ght.matchRouting(tc.method, tc.path)
+		repoPath, filePath, _, err := ghx.matchRouting(tc.method, tc.path)
 		if err != nil {
 			t.Errorf("error is %s", err.Error())
 			return
