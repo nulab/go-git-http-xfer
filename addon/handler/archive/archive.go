@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/vvatanabe/go-git-http-xfer/githttpxfer"
+	"github.com/nulab/go-git-http-xfer/githttpxfer"
 )
 
 var (

@@ -10,5 +10,5 @@ before_script:
   - docker build -t go-git-http-xfer .
 
 script:
-  - docker run --rm -v $PWD:/go/src/github.com/vvatanabe/go-git-http-xfer go-git-http-xfer bash -c "gotestcover -v -covermode=count -coverprofile=coverage.out ./..."
+  - docker run --rm -v $PWD:/go/src/github.com/nulab/go-git-http-xfer go-git-http-xfer bash -c "gotestcover -v -covermode=count -coverprofile=coverage.out ./..."
   - $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service travis-ci

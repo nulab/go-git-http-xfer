@@ -8,7 +8,7 @@ import (
 	"path"
 	"testing"
 
-	"github.com/vvatanabe/go-git-http-xfer/githttpxfer"
+	"github.com/nulab/go-git-http-xfer/githttpxfer"
 )
 
 func Test_it_should_download_archive_repository(t *testing.T) {

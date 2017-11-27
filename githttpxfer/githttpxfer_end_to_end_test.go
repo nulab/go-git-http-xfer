@@ -48,10 +48,10 @@ func setupEndToEndTest(t *testing.T) error {
 	}
 
 	endToEndTestParams.ghx = ghx
-	endToEndTestParams.ghx.Event.On(PrepareServiceRPCUpload, func(ctx Context) {
+	endToEndTestParams.ghx.Event.On(BeforeUploadPack, func(ctx Context) {
 		t.Log("prepare run service rpc upload.")
 	})
-	endToEndTestParams.ghx.Event.On(PrepareServiceRPCReceive, func(ctx Context) {
+	endToEndTestParams.ghx.Event.On(BeforeReceivePack, func(ctx Context) {
 		t.Log("prepare run service rpc receive.")
 	})
 	endToEndTestParams.ghx.Event.On(AfterMatchRouting, func(ctx Context) {

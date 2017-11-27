@@ -82,13 +82,13 @@ type options struct {
 
 type Option func(*options)
 
-func WithoutUploadPack() Option {
+func DisableUploadPack() Option {
 	return func(o *options) {
 		o.uploadPack = false
 	}
 }
 
-func WithoutReceivePack() Option {
+func DisableReceivePack() Option {
 	return func(o *options) {
 		o.receivePack = false
 	}
@@ -193,9 +193,9 @@ func newEvent() *event {
 type EventKey string
 
 const (
-	PrepareServiceRPCUpload  EventKey = "prepare-service-rpc-upload"
-	PrepareServiceRPCReceive EventKey = "prepare-service-rpc-receive"
-	AfterMatchRouting        EventKey = "after-match-routing"
+	BeforeUploadPack  EventKey = "before-upload-pack"
+	BeforeReceivePack EventKey = "before-receive-pack"
+	AfterMatchRouting EventKey = "after-match-routing"
 )
 
 type event struct {
@@ -214,12 +214,12 @@ func (e *event) On(evt EventKey, listener HandlerFunc) {
 }
 
 func (ghx *GitHTTPXfer) serviceRPCUpload(ctx Context) {
-	ghx.Event.emit(PrepareServiceRPCUpload, ctx)
+	ghx.Event.emit(BeforeUploadPack, ctx)
 	ghx.serviceRPC(ctx, uploadPack)
 }
 
 func (ghx *GitHTTPXfer) serviceRPCReceive(ctx Context) {
-	ghx.Event.emit(PrepareServiceRPCReceive, ctx)
+	ghx.Event.emit(BeforeReceivePack, ctx)
 	ghx.serviceRPC(ctx, receivePack)
 }
 

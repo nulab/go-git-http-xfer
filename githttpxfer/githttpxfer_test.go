@@ -15,25 +15,25 @@ func Test_GitHTTPXfer_GitHTTPXferOption(t *testing.T) {
 	}
 
 	tests := []struct {
-		description           string
-		url                   string
-		contentsType          string
-		expectedCode          int
+		description       string
+		url               string
+		contentsType      string
+		expectedCode      int
 		gitHTTPXferOption Option
 	}{
 		{
-			description:           "it should return 403 if upload-pack is off",
-			url:                   "/test.git/git-upload-pack",
-			contentsType:          "application/x-git-upload-pack-request",
-			expectedCode:          403,
-			gitHTTPXferOption: WithoutUploadPack(),
+			description:       "it should return 403 if upload-pack is off",
+			url:               "/test.git/git-upload-pack",
+			contentsType:      "application/x-git-upload-pack-request",
+			expectedCode:      403,
+			gitHTTPXferOption: DisableUploadPack(),
 		},
 		{
-			description:           "it should return 403 if receive-pack is off",
-			url:                   "/test.git/git-receive-pack",
-			contentsType:          "application/x-git-receive-pack-request",
-			expectedCode:          403,
-			gitHTTPXferOption: WithoutReceivePack(),
+			description:       "it should return 403 if receive-pack is off",
+			url:               "/test.git/git-receive-pack",
+			contentsType:      "application/x-git-receive-pack-request",
+			expectedCode:      403,
+			gitHTTPXferOption: DisableReceivePack(),
 		},
 	}
 

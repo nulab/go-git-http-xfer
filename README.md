@@ -1,4 +1,4 @@
-# go-git-http-xfer [![Build Status](https://travis-ci.org/vvatanabe/go-git-http-xfer.svg?branch=master)](https://travis-ci.org/vvatanabe/go-git-http-xfer) [![Coverage Status](https://coveralls.io/repos/github/vvatanabe/go-git-http-xfer/badge.svg?branch=master)](https://coveralls.io/github/vvatanabe/go-git-http-xfer?branch=master)
+# go-git-http-xfer [![Build Status](https://travis-ci.org/nulab/go-git-http-xfer.svg?branch=master)](https://travis-ci.org/nulab/go-git-http-xfer) [![Coverage Status](https://coveralls.io/repos/github/nulab/go-git-http-xfer/badge.svg?branch=master)](https://coveralls.io/github/nulab/go-git-http-xfer?branch=master)
 
 Implements Git HTTP Transport.
 
@@ -16,15 +16,19 @@ Implements Git HTTP Transport.
 Let's clone this repository and execute the following commands.
 
 ```` zsh
+# docker build
 $ docker build -t git-http-xfer .
-$ docker run -it --rm -v $PWD:/go/src/github.com/vvatanabe/go-git-http-xfer \
-    -p 8080:8080 git-http-xfer bash
 
-# in container
-$ go run /go/src/github.com/vvatanabe/go-git-http-xfer/example/main.go -p 8080
+# test
+$ docker run --rm -v $PWD:/go/src/github.com/nulab/go-git-http-xfer go-git-http-xfer \
+    bash -c "gotestcover -v -covermode=count -coverprofile=coverage.out ./..."
+
+# run server
+$ docker run -it --rm -v $PWD:/go/src/github.com/nulab/go-git-http-xfer -p 5050:5050 go-git-http-xfer \
+    bash -c "go run ./example/main.go -p 5050"
 
 # in your local machine
-$ git clone http://localhost:8080/example.git
+$ git clone http://localhost:5050/example.git
 ````
 
 ## Installation
@@ -32,7 +36,7 @@ $ git clone http://localhost:8080/example.git
 This package can be installed with the go get command:
 
 ``` zsh
-$ go get github.com/vvatanabe/go-git-http-xfer
+$ go get github.com/nulab/go-git-http-xfer
 ```
 
 ## Usage
@@ -45,7 +49,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/vvatanabe/go-git-http-xfer/githttpxfer"
+	"github.com/nulab/go-git-http-xfer/githttpxfer"
 )
 
 func main() {
@@ -56,21 +60,21 @@ func main() {
 		return
 	}
 	
-	if err := http.ListenAndServe(":8080", ghx); err != nil {
+	if err := http.ListenAndServe(":5050", ghx); err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
 }
 ```
 You can add optional parameters to constructor function.
-* `WithoutUploadPack` : Disable `git-upload-pack` command.
-* `WithoutReceivePack`: Disable `git-receive-pack` command.
-* `WithoutDumbProto`  : Disable `dumb protocol` handling.
+* `DisableUploadPack` : Disable `git upload-pack` command.
+* `DisableReceivePack`: Disable `git receive-pack` command.
+* `WithoutDumbProto`  : Without `dumb protocol` handling.
 ```go
 	ghx, err := githttpxfer.New(
 		"/data/git",
 		"/usr/bin/git",
-		githttpxfer.WithoutUploadPack(),
-		githttpxfer.WithoutReceivePack(),
+		githttpxfer.DisableUploadPack(),
+		githttpxfer.DisableReceivePack(),
 		githttpxfer.WithoutDumbProto(),
 	)
 ```
@@ -103,7 +107,7 @@ func main() {
 		},
 	))
 	
-	if err := http.ListenAndServe(":8080", ghx); err != nil {
+	if err := http.ListenAndServe(":5050", ghx); err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
 }
@@ -120,7 +124,7 @@ func main() {
 	
 	handler := Logging(ghx)
 	
-	if err := http.ListenAndServe(":8080", ghx); err != nil {
+	if err := http.ListenAndServe(":5050", ghx); err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
 }
@@ -137,7 +141,7 @@ func Logging(next http.Handler) http.Handler {
 You can add some addon handler. (git archive)
 ``` go
 import (
-	"github.com/vvatanabe/go-git-http-xfer/addon/archivehandler"
+	"github.com/nulab/go-git-http-xfer/addon/archivehandler"
 )
 
 func main() {
@@ -153,7 +157,7 @@ func main() {
 		archivehandler.New(ghx).HandlerFunc,
 	))
 	
-	if err := http.ListenAndServe(":8080", ghx); err != nil {
+	if err := http.ListenAndServe(":5050", ghx); err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
 }

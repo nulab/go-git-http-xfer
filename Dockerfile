@@ -1,18 +1,3 @@
-#
-# [docker build]
-# docker build -t go-git-http-xfer .
-#
-# [test]
-# docker run --rm -v $PWD:/go/src/github.com/vvatanabe/go-git-http-xfer go-git-http-xfer bash -c "gotestcover -v -covermode=count -coverprofile=coverage.out ./..."
-#
-# [attach]
-# docker run -it --rm -v $PWD:/go/src/github.com/vvatanabe/go-git-http-xfer -p 8080:8080 go-git-http-xfer bash
-#
-# [run server](in container)
-# go run /go/src/github.com/vvatanabe/go-git-http-xfer/example/main.go -p 8080
-# And
-# gin -t ./example -p 8080 -a 5050
-#
 # OFFICIAL REPOSITORY: https://hub.docker.com/_/golang/
 FROM golang:1.9
 
@@ -36,8 +21,8 @@ ENV GIT_TEST_REPO_DIR /data/git/test.git
 RUN mkdir -p $GIT_TEST_REPO_DIR && cd $GIT_TEST_REPO_DIR && git init --bare --shared
 
 
-ENV SRC_DIR /go/src/github.com/vvatanabe/go-git-http-xfer
+ENV SRC_DIR /go/src/github.com/nulab/go-git-http-xfer
 RUN mkdir -p $SRC_DIR
 WORKDIR $SRC_DIR
 
-EXPOSE 8080
+EXPOSE 5050
