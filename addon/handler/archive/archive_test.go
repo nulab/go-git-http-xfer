@@ -1,4 +1,4 @@
-package archivehandler
+package archive
 
 import (
 	"io/ioutil"
@@ -27,7 +27,7 @@ func Test_it_should_download_archive_repository(t *testing.T) {
 	ght.Router.Add(githttptransfer.NewRoute(
 		Method,
 		Pattern,
-		New(ght).HandlerFunc,
+		New(ght).Archive,
 	))
 
 	ts := httptest.NewServer(ght)

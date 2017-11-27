@@ -8,9 +8,10 @@ import (
 
 	"flag"
 
-	"github.com/vvatanabe/go-git-http-transfer/addon/archivehandler"
-	"github.com/vvatanabe/go-git-http-transfer/githttptransfer"
 	"strings"
+
+	"github.com/vvatanabe/go-git-http-transfer/addon/handler/archive"
+	"github.com/vvatanabe/go-git-http-transfer/githttptransfer"
 )
 
 func main() {
@@ -21,7 +22,7 @@ func main() {
 
 	ght, err := githttptransfer.New("/data/git", "/usr/bin/git")
 	if err != nil {
-		log.Fatalf("GitHTTPTransfer instance could not be created. %s", err.Error())
+		log.Fatal("GitHTTPTransfer instance could not be created.", err)
 		return
 	}
 
@@ -58,9 +59,9 @@ func main() {
 
 	// You can add some addon handler. (git archive)
 	ght.Router.Add(githttptransfer.NewRoute(
-		archivehandler.Method,
-		archivehandler.Pattern,
-		archivehandler.New(ght).HandlerFunc,
+		archive.Method,
+		archive.Pattern,
+		archive.New(ght).Archive,
 	))
 
 	// You can add some middleware.
@@ -79,4 +80,23 @@ func Logging(next http.Handler) http.Handler {
 		t2 := time.Now()
 		log.Printf("[%s] %q %v\n", r.Method, r.URL.String(), t2.Sub(t1))
 	})
+}
+
+func BasicAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		username, password, ok := r.BasicAuth()
+		if !ok || username != "nulab" || password != "DeaDBeeF" {
+			RenderUnauthorized(w)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func RenderUnauthorized(w http.ResponseWriter) {
+	w.Header().Set("WWW-Authenticate", `Basic realm="Please enter your username and password."`)
+
+	w.WriteHeader(http.StatusUnauthorized)
+	w.Write([]byte(http.StatusText(http.StatusUnauthorized)))
+	w.Header().Set("Content-Type", "text/plain")
 }

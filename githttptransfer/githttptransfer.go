@@ -39,20 +39,24 @@ var (
 		return hasSuffix(path, "/objects/info/packs")
 	}
 
+	getInfoFileRegexp = regexp.MustCompile(".*?(/objects/info/[^/]*)$")
 	getInfoFile = func(path string) (match string) {
-		return findStringSubmatch(path, regexp.MustCompile(".*?(/objects/info/[^/]*)$"))
+		return findStringSubmatch(path, getInfoFileRegexp)
 	}
 
+	getLooseObjectRegexp = regexp.MustCompile(".*?(/objects/[0-9a-f]{2}/[0-9a-f]{38})$")
 	getLooseObject = func(path string) (match string) {
-		return findStringSubmatch(path, regexp.MustCompile(".*?(/objects/[0-9a-f]{2}/[0-9a-f]{38})$"))
+		return findStringSubmatch(path, getLooseObjectRegexp)
 	}
 
+	getPackFileRegexp = regexp.MustCompile(".*?(/objects/pack/pack-[0-9a-f]{40}\\.pack)$")
 	getPackFile = func(path string) (match string) {
-		return findStringSubmatch(path, regexp.MustCompile(".*?(/objects/pack/pack-[0-9a-f]{40}\\.pack)$"))
+		return findStringSubmatch(path, getPackFileRegexp)
 	}
 
+	getIdxFileRegexp = regexp.MustCompile(".*?(/objects/pack/pack-[0-9a-f]{40}\\.idx)$")
 	getIdxFile = func(path string) (match string) {
-		return findStringSubmatch(path, regexp.MustCompile(".*?(/objects/pack/pack-[0-9a-f]{40}\\.idx)$"))
+		return findStringSubmatch(path, getIdxFileRegexp)
 	}
 )
 
@@ -119,7 +123,6 @@ func New(gitRootPath, gitBinPath string, opts ...Option) (*GitHTTPTransfer, erro
 	ght := &GitHTTPTransfer{git, router, event}
 
 	ght.Router.Add(NewRoute(http.MethodPost, serviceRPCUpload, ght.serviceRPCUpload))
-
 	ght.Router.Add(NewRoute(http.MethodPost, serviceRPCReceive, ght.serviceRPCReceive))
 	ght.Router.Add(NewRoute(http.MethodGet, getInfoRefs, ght.getInfoRefs))
 
@@ -284,7 +287,6 @@ func (ght *GitHTTPTransfer) serviceRPC(ctx Context, rpc string) {
 
 	if err = cmd.Wait(); err != nil {
 		RenderInternalServerError(ctx.Response().Writer)
-		return
 	}
 }
 

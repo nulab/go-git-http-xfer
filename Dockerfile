@@ -26,8 +26,6 @@ RUN apt-get update \
 
 RUN go get github.com/pierrre/gotestcover && go get github.com/codegangsta/gin
 
-ENV TZ Asia/Tokyo
-
 ENV GIT_ROOT_DIR /data/git
 RUN mkdir -p $GIT_ROOT_DIR
 

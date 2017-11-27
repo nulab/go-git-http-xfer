@@ -1,4 +1,4 @@
-package archivehandler
+package archive
 
 import (
 	"fmt"
@@ -11,9 +11,9 @@ import (
 )
 
 var (
-	r       = regexp.MustCompile(".*?(/archive/.*?\\.(zip|tar))$")
-	Pattern = func(path string) (match string) {
-		if m := r.FindStringSubmatch(path); m != nil {
+	archiveRegexp = regexp.MustCompile(".*?(/archive/.*?\\.(zip|tar))$")
+	Pattern       = func(path string) (match string) {
+		if m := archiveRegexp.FindStringSubmatch(path); m != nil {
 			match = m[1]
 		}
 		return
@@ -21,15 +21,15 @@ var (
 	Method = http.MethodGet
 )
 
-func New(ght *githttptransfer.GitHTTPTransfer) *ArchiveHandler {
-	return &ArchiveHandler{ght}
+func New(ght *githttptransfer.GitHTTPTransfer) *gitHTTPTransfer {
+	return &gitHTTPTransfer{ght}
 }
 
-type ArchiveHandler struct {
+type gitHTTPTransfer struct {
 	*githttptransfer.GitHTTPTransfer
 }
 
-func (ght *ArchiveHandler) HandlerFunc(ctx githttptransfer.Context) {
+func (ght *gitHTTPTransfer) Archive(ctx githttptransfer.Context) {
 
 	res, repoPath, filePath := ctx.Response(), ctx.RepoPath(), ctx.FilePath()
 
