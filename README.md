@@ -141,7 +141,7 @@ func Logging(next http.Handler) http.Handler {
 You can add some addon handler. (git archive)
 ``` go
 import (
-	"github.com/nulab/go-git-http-xfer/addon/archivehandler"
+	"github.com/nulab/go-git-http-xfer/addon/handler/archive"
 )
 
 func main() {
@@ -152,9 +152,9 @@ func main() {
 	}
 	
 	ghx.Router.Add(githttpxfer.NewRoute(
-		archivehandler.Method,
-		archivehandler.Pattern,
-		archivehandler.New(ghx).HandlerFunc,
+		archive.Method,
+		archive.Pattern,
+		archive.New(ghx).Archive,
 	))
 	
 	if err := http.ListenAndServe(":5050", ghx); err != nil {
