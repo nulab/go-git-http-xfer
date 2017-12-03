@@ -146,7 +146,6 @@ type GitHTTPXfer struct {
 }
 
 func (ghx *GitHTTPXfer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-
 	repoPath, filePath, handler, err := ghx.matchRouting(r.Method, r.URL.Path)
 	switch err.(type) {
 	case *URLNotFoundError:
