@@ -8,7 +8,6 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"sync"
 )
 
 var (
@@ -120,7 +119,7 @@ func New(gitRootPath, gitBinPath string, opts ...Option) (*GitHTTPXfer, error) {
 	router := newRouter()
 	event := newEvent()
 
-	ghx := &GitHTTPXfer{git, router, event}
+	ghx := &GitHTTPXfer{git, router, event, &defaultLogger{}}
 
 	ghx.Router.Add(NewRoute(http.MethodPost, serviceRPCUpload, ghx.serviceRPCUpload))
 	ghx.Router.Add(NewRoute(http.MethodPost, serviceRPCReceive, ghx.serviceRPCReceive))
@@ -143,6 +142,11 @@ type GitHTTPXfer struct {
 	Git    *git
 	Router *router
 	Event  *event
+	logger Logger
+}
+
+func (ghx *GitHTTPXfer) SetLogger(logger Logger) {
+	ghx.logger = logger
 }
 
 func (ghx *GitHTTPXfer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
@@ -227,7 +231,7 @@ func (ghx *GitHTTPXfer) serviceRPC(ctx Context, rpc string) {
 	res, req, repoPath := ctx.Response(), ctx.Request(), ctx.RepoPath()
 
 	if !ghx.Git.HasAccess(req, rpc, true) {
-		RenderNoAccess(ctx.Response().Writer)
+		RenderNoAccess(res.Writer)
 		return
 	}
 
@@ -237,7 +241,8 @@ func (ghx *GitHTTPXfer) serviceRPC(ctx Context, rpc string) {
 	if req.Header.Get("Content-Encoding") == "gzip" {
 		body, err = gzip.NewReader(req.Body)
 		if err != nil {
-			RenderInternalServerError(ctx.Response().Writer)
+			ghx.logger.Error("failed to create a reader reading the given reader. ", err.Error())
+			RenderInternalServerError(res.Writer)
 			return
 		}
 	} else {
@@ -245,47 +250,40 @@ func (ghx *GitHTTPXfer) serviceRPC(ctx Context, rpc string) {
 	}
 	defer body.Close()
 
-	res.SetContentType(fmt.Sprintf("application/x-git-%s-result", rpc))
-
 	args := []string{rpc, "--stateless-rpc", "."}
 	cmd := ghx.Git.GitCommand(repoPath, args...)
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
-		RenderInternalServerError(ctx.Response().Writer)
+		ghx.logger.Error("failed to get pipe that will be connected to the command's standard input. ", err.Error())
+		RenderInternalServerError(res.Writer)
 		return
 	}
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		RenderInternalServerError(ctx.Response().Writer)
+		ghx.logger.Error("failed to get pipe that will be connected to the command's standard output. ", err.Error())
+		RenderInternalServerError(res.Writer)
 		return
 	}
 
 	if err = cmd.Start(); err != nil {
-		RenderInternalServerError(ctx.Response().Writer)
+		ghx.logger.Error("failed to starts the specified command. ", err.Error())
+		RenderInternalServerError(res.Writer)
 		return
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(2)
+	io.Copy(stdin, body)
+	stdin.Close()
 
-	go func() {
-		defer wg.Done()
-		defer stdin.Close()
-		io.Copy(stdin, body)
-	}()
+	res.SetContentType(fmt.Sprintf("application/x-git-%s-result", rpc))
+	res.WriteHeader(http.StatusOK)
 
-	go func() {
-		defer wg.Done()
-		defer stdout.Close()
-		res.Copy(stdout)
-	}()
-
-	wg.Wait()
+	io.Copy(res.Writer, stdout)
+	stdout.Close()
 
 	if err = cmd.Wait(); err != nil {
-		RenderInternalServerError(ctx.Response().Writer)
+		ghx.logger.Error("specified command fails to run or doesn't complete successfully. ", err.Error())
 	}
 }
 
@@ -297,7 +295,8 @@ func (ghx *GitHTTPXfer) getInfoRefs(ctx Context) {
 		ghx.Git.UpdateServerInfo(repoPath)
 		res.HdrNocache()
 		if err := ghx.sendFile("text/plain; charset=utf-8", ctx); err != nil {
-			RenderNotFound(ctx.Response().Writer)
+			RenderNotFound(res.Writer)
+			return
 		}
 	}
 
