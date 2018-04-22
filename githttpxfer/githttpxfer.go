@@ -259,6 +259,7 @@ func (ghx *GitHTTPXfer) serviceRPC(ctx Context, rpc string) {
 		RenderInternalServerError(res.Writer)
 		return
 	}
+	defer stdin.Close()
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -266,6 +267,7 @@ func (ghx *GitHTTPXfer) serviceRPC(ctx Context, rpc string) {
 		RenderInternalServerError(res.Writer)
 		return
 	}
+	defer stdout.Close()
 
 	if err = cmd.Start(); err != nil {
 		ghx.logger.Error("failed to starts the specified command. ", err.Error())
@@ -273,14 +275,20 @@ func (ghx *GitHTTPXfer) serviceRPC(ctx Context, rpc string) {
 		return
 	}
 
-	io.Copy(stdin, body)
-	stdin.Close()
+	if _, err := io.Copy(stdin, body); err != nil {
+		ghx.logger.Error("failed to write the request body to standard input. ", err.Error())
+		RenderInternalServerError(res.Writer)
+		return
+	}
 
 	res.SetContentType(fmt.Sprintf("application/x-git-%s-result", rpc))
 	res.WriteHeader(http.StatusOK)
 
-	io.Copy(res.Writer, stdout)
-	stdout.Close()
+	if _, err := io.Copy(res.Writer, stdout); err != nil {
+		ghx.logger.Error("failed to write the standard output to response. ", err.Error())
+		return
+	}
+
 
 	if err = cmd.Wait(); err != nil {
 		ghx.logger.Error("specified command fails to run or doesn't complete successfully. ", err.Error())
