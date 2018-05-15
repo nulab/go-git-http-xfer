@@ -95,8 +95,10 @@ func Test_End_To_End_it_should_succeed_clone_and_push_and_fetch_and_log(t *testi
 
 	destDirNameA := "test_a"
 	destDirNameB := "test_b"
+	destDirNameC := "test_c"
 	destDirPathA := path.Join(endToEndTestParams.workingDirPath, destDirNameA)
 	destDirPathB := path.Join(endToEndTestParams.workingDirPath, destDirNameB)
+	destDirPathC := path.Join(endToEndTestParams.workingDirPath, destDirNameC)
 
 	if _, err := execCmd("", "git", "clone", remoteRepoUrl, destDirPathA); err != nil {
 		t.Errorf("execute command error: %s", err.Error())
@@ -144,6 +146,11 @@ func Test_End_To_End_it_should_succeed_clone_and_push_and_fetch_and_log(t *testi
 	}
 
 	if _, err := execCmd(destDirPathB, "git", "log", "--oneline", "origin/master", "-1"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
+
+	if _, err := execCmd("", "git", "clone", "--depth=1", remoteRepoUrl, destDirPathC); err != nil {
 		t.Errorf("execute command error: %s", err.Error())
 		return
 	}

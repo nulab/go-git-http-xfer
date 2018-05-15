@@ -280,6 +280,9 @@ func (ghx *GitHTTPXfer) serviceRPC(ctx Context, rpc string) {
 		RenderInternalServerError(res.Writer)
 		return
 	}
+	// "git-upload-pack" waits for the remaining input and it hangs,
+	// so must close it after completing the copy request body to standard input.
+	stdin.Close()
 
 	res.SetContentType(fmt.Sprintf("application/x-git-%s-result", rpc))
 	res.WriteHeader(http.StatusOK)
