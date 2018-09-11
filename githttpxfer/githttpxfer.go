@@ -150,7 +150,7 @@ func (ghx *GitHTTPXfer) SetLogger(logger Logger) {
 }
 
 func (ghx *GitHTTPXfer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	repoPath, filePath, handler, err := ghx.matchRouting(r.Method, r.URL.Path)
+	repoPath, filePath, handler, err := ghx.matchRouting(r.Method, r.URL.EscapedPath())
 	switch err.(type) {
 	case *URLNotFoundError:
 		RenderNotFound(rw)
@@ -291,7 +291,6 @@ func (ghx *GitHTTPXfer) serviceRPC(ctx Context, rpc string) {
 		ghx.logger.Error("failed to write the standard output to response. ", err.Error())
 		return
 	}
-
 
 	if err = cmd.Wait(); err != nil {
 		ghx.logger.Error("specified command fails to run or doesn't complete successfully. ", err.Error())
