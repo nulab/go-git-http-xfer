@@ -10,6 +10,8 @@ import (
 
 	"strings"
 
+	"net/url"
+
 	"github.com/nulab/go-git-http-xfer/addon/handler/archive"
 	"github.com/nulab/go-git-http-xfer/githttpxfer"
 )
@@ -41,12 +43,14 @@ func main() {
 	// You can add some custom route.
 	ghx.Router.Add(githttpxfer.NewRoute(
 		http.MethodGet,
-		func(path string) (match string) {
+		func(u *url.URL) *githttpxfer.Match {
 			suffix := "/hello"
-			if strings.HasSuffix(path, suffix) {
-				match = suffix
+			if !strings.HasSuffix(u.Path, suffix) {
+				return nil
 			}
-			return
+			repoPath := strings.Replace(u.Path, suffix, "", 1)
+			filePath := strings.Replace(u.Path, repoPath+"/", "", 1)
+			return &githttpxfer.Match{repoPath, filePath}
 		},
 		func(ctx githttpxfer.Context) {
 			resp, req := ctx.Response(), ctx.Request()

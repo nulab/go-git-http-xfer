@@ -17,7 +17,7 @@ Let's clone this repository and execute the following commands.
 
 ```` zsh
 # docker build
-$ docker build -t git-http-xfer .
+$ docker build -t go-git-http-xfer .
 
 # test
 $ docker run --rm -v $PWD:/go/src/github.com/nulab/go-git-http-xfer go-git-http-xfer \
@@ -91,12 +91,14 @@ func main() {
 	// You can add some custom route.
 	ghx.Router.Add(githttpxfer.NewRoute(
 		http.MethodGet,
-		func (path string) (match string) {
+		func (u *url.URL) *Match {
 			suffix := "/hello"
-			if strings.HasSuffix(path, suffix) {
-				match = suffix
+			if !strings.HasSuffix(u.Path, suffix) {
+				return nil
 			}
-			return
+			repoPath := strings.Replace(u.Path, suffix, "", 1)
+			filePath := strings.Replace(u.Path, repoPath+"/", "", 1)
+			return &Match{repoPath, filePath}
 		},
 		func(ctx githttpxfer.Context) {
 			resp, req := ctx.Response(), ctx.Request()
