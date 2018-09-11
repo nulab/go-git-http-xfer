@@ -7,16 +7,22 @@ import (
 	"regexp"
 	"strings"
 
+	"net/url"
+
 	"github.com/nulab/go-git-http-xfer/githttpxfer"
 )
 
 var (
 	archiveRegexp = regexp.MustCompile(".*?(/archive/.*?\\.(zip|tar))$")
-	Pattern       = func(path string) (match string) {
-		if m := archiveRegexp.FindStringSubmatch(path); m != nil {
-			match = m[1]
+	Pattern       = func(u *url.URL) *githttpxfer.Match {
+		m := archiveRegexp.FindStringSubmatch(u.Path)
+		if m == nil {
+			return nil
 		}
-		return
+		suffix := m[1]
+		repoPath := strings.Replace(u.Path, suffix, "", 1)
+		filePath := strings.Replace(u.Path, repoPath+"/", "", 1)
+		return &githttpxfer.Match{repoPath, filePath}
 	}
 	Method = http.MethodGet
 )

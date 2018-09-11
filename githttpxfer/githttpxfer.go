@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -12,66 +13,76 @@ import (
 )
 
 var (
-	serviceRPCUpload = func(path string) (match string) {
-		return hasSuffix(path, "/git-upload-pack")
+	serviceRPCUpload = func(u *url.URL) *Match {
+		return matchSuffix(u.Path, "/git-upload-pack")
 	}
-	serviceRPCReceive = func(path string) (match string) {
-		return hasSuffix(path, "/git-receive-pack")
-	}
-
-	getInfoRefs = func(path string) (match string) {
-		return hasSuffix(path, "/info/refs")
+	serviceRPCReceive = func(u *url.URL) *Match {
+		return matchSuffix(u.Path, "/git-receive-pack")
 	}
 
-	getHead = func(path string) (match string) {
-		return hasSuffix(path, "/HEAD")
+	getInfoRefs = func(u *url.URL) *Match {
+		return matchSuffix(u.Path, "/info/refs")
 	}
 
-	getAlternates = func(path string) (match string) {
-		return hasSuffix(path, "/objects/info/alternates")
+	getHead = func(u *url.URL) *Match {
+		return matchSuffix(u.Path, "/HEAD")
 	}
 
-	getHTTPAlternates = func(path string) (match string) {
-		return hasSuffix(path, "/objects/info/http-alternates")
+	getAlternates = func(u *url.URL) *Match {
+		return matchSuffix(u.Path, "/objects/info/alternates")
 	}
 
-	getInfoPacks = func(path string) (match string) {
-		return hasSuffix(path, "/objects/info/packs")
+	getHTTPAlternates = func(u *url.URL) *Match {
+		return matchSuffix(u.Path, "/objects/info/http-alternates")
+	}
+
+	getInfoPacks = func(u *url.URL) *Match {
+		return matchSuffix(u.Path, "/objects/info/packs")
 	}
 
 	getInfoFileRegexp = regexp.MustCompile(".*?(/objects/info/[^/]*)$")
-	getInfoFile       = func(path string) (match string) {
-		return findStringSubmatch(path, getInfoFileRegexp)
+	getInfoFile       = func(u *url.URL) *Match {
+		return findStringSubmatch(u.Path, getInfoFileRegexp)
 	}
 
 	getLooseObjectRegexp = regexp.MustCompile(".*?(/objects/[0-9a-f]{2}/[0-9a-f]{38})$")
-	getLooseObject       = func(path string) (match string) {
-		return findStringSubmatch(path, getLooseObjectRegexp)
+	getLooseObject       = func(u *url.URL) *Match {
+		return findStringSubmatch(u.Path, getLooseObjectRegexp)
 	}
 
 	getPackFileRegexp = regexp.MustCompile(".*?(/objects/pack/pack-[0-9a-f]{40}\\.pack)$")
-	getPackFile       = func(path string) (match string) {
-		return findStringSubmatch(path, getPackFileRegexp)
+	getPackFile       = func(u *url.URL) *Match {
+		return findStringSubmatch(u.Path, getPackFileRegexp)
 	}
 
 	getIdxFileRegexp = regexp.MustCompile(".*?(/objects/pack/pack-[0-9a-f]{40}\\.idx)$")
-	getIdxFile       = func(path string) (match string) {
-		return findStringSubmatch(path, getIdxFileRegexp)
+	getIdxFile       = func(u *url.URL) *Match {
+		return findStringSubmatch(u.Path, getIdxFileRegexp)
 	}
 )
 
-func hasSuffix(path, suffix string) (match string) {
-	if strings.HasSuffix(path, suffix) {
-		match = suffix
-	}
-	return
+type Match struct {
+	RepoPath, FilePath string
 }
 
-func findStringSubmatch(path string, prefix *regexp.Regexp) (match string) {
-	if m := prefix.FindStringSubmatch(path); m != nil {
-		match = m[1]
+func matchSuffix(path, suffix string) *Match {
+	if !strings.HasSuffix(path, suffix) {
+		return nil
 	}
-	return
+	repoPath := strings.Replace(path, suffix, "", 1)
+	filePath := strings.Replace(path, repoPath+"/", "", 1)
+	return &Match{repoPath, filePath}
+}
+
+func findStringSubmatch(path string, prefix *regexp.Regexp) *Match {
+	m := prefix.FindStringSubmatch(path)
+	if m == nil {
+		return nil
+	}
+	suffix := m[1]
+	repoPath := strings.Replace(path, suffix, "", 1)
+	filePath := strings.Replace(path, repoPath+"/", "", 1)
+	return &Match{repoPath, filePath}
 }
 
 type options struct {
@@ -151,7 +162,7 @@ func (ghx *GitHTTPXfer) SetLogger(logger Logger) {
 }
 
 func (ghx *GitHTTPXfer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	repoPath, filePath, handler, err := ghx.matchRouting(r.Method, r.URL.Path)
+	repoPath, filePath, handler, err := ghx.matchRouting(r.Method, r.URL)
 	switch err.(type) {
 	case *URLNotFoundError:
 		RenderNotFound(rw)
@@ -173,11 +184,12 @@ func (ghx *GitHTTPXfer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	handler(ctx)
 }
 
-func (ghx *GitHTTPXfer) matchRouting(method, path string) (repoPath string, filePath string, handler HandlerFunc, err error) {
-	match, route, err := ghx.Router.Match(method, path)
+func (ghx *GitHTTPXfer) matchRouting(method string, u *url.URL) (repoPath string, filePath string, handler HandlerFunc, err error) {
+	match, route, err := ghx.Router.Match(method, u)
+
 	if err == nil {
-		repoPath = strings.Replace(path, match, "", 1)
-		filePath = strings.Replace(path, repoPath+"/", "", 1)
+		repoPath = match.RepoPath
+		filePath = match.FilePath
 		handler = route.Handler
 	}
 	return
