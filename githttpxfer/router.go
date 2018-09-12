@@ -1,5 +1,7 @@
 package githttpxfer
 
+import "net/url"
+
 type router struct {
 	routes []*Route
 }
@@ -11,13 +13,13 @@ func (r *router) Add(route *Route) {
 	r.routes = append(r.routes, route)
 }
 
-func (r *router) Match(method string, path string) (match string, route *Route, err error) {
+func (r *router) Match(method string, u *url.URL) (match *Match, route *Route, err error) {
 	for _, v := range r.routes {
-		if m := v.Pattern(path); m != "" {
+		if m := v.Pattern(u); m != nil {
 			if v.Method != method {
 				err = &MethodNotAllowedError{
 					Method: method,
-					Path:   path,
+					Path:   u.Path,
 				}
 				return
 			}
@@ -29,7 +31,7 @@ func (r *router) Match(method string, path string) (match string, route *Route, 
 
 	err = &URLNotFoundError{
 		Method: method,
-		Path:   path,
+		Path:   u.Path,
 	}
 	return
 }
@@ -38,7 +40,7 @@ func newRouter() *router {
 	return &router{routes: []*Route{}}
 }
 
-type Pattern = func(path string) (match string)
+type Pattern = func(u *url.URL) *Match
 
 type Route struct {
 	Method  string

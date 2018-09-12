@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os/exec"
 	"testing"
 )
@@ -77,8 +78,10 @@ func Test_GitHTTPXfer_MatchRouting_should_not_match(t *testing.T) {
 		return
 	}
 	m := http.MethodGet
-	p := "/base/foo/git-upload-pack"
-	_, _, _, err = ghx.matchRouting(m, p)
+	u := &url.URL{
+		Path: "/base/foo/git-upload-pack",
+	}
+	_, _, _, err = ghx.matchRouting(m, u)
 	if err == nil {
 		t.Error("Allowed.")
 		return
@@ -99,70 +102,70 @@ func Test_GitHTTPXfer_MatchRouting_should_match(t *testing.T) {
 	tests := []struct {
 		description      string
 		method           string
-		path             string
+		u                *url.URL
 		expectedRepoPath string
 		expectedFilePath string
 	}{
 		{
 			description:      "it should match git-upload-pack",
 			method:           http.MethodPost,
-			path:             "/base/foo/git-upload-pack",
+			u:                &url.URL{Path: "/base/foo/git-upload-pack"},
 			expectedRepoPath: "/base/foo",
 			expectedFilePath: "git-upload-pack",
 		},
 		{
 			description:      "it should match get-info-refs",
 			method:           http.MethodGet,
-			path:             "/base/foo/info/refs",
+			u:                &url.URL{Path: "/base/foo/info/refs"},
 			expectedRepoPath: "/base/foo",
 			expectedFilePath: "info/refs",
 		},
 		{
 			description:      "it should match get-head",
 			method:           http.MethodGet,
-			path:             "/base/foo/HEAD",
+			u:                &url.URL{Path: "/base/foo/HEAD"},
 			expectedRepoPath: "/base/foo",
 			expectedFilePath: "HEAD",
 		},
 		{
 			description:      "it should match get-alternates",
 			method:           http.MethodGet,
-			path:             "/base/foo/objects/info/alternates",
+			u:                &url.URL{Path: "/base/foo/objects/info/alternates"},
 			expectedRepoPath: "/base/foo",
 			expectedFilePath: "objects/info/alternates",
 		},
 		{
 			description:      "it should match get-http-alternates",
 			method:           http.MethodGet,
-			path:             "/base/foo/objects/info/http-alternates",
+			u:                &url.URL{Path: "/base/foo/objects/info/http-alternates"},
 			expectedRepoPath: "/base/foo",
 			expectedFilePath: "objects/info/http-alternates",
 		},
 		{
 			description:      "it should match get-info-packs",
 			method:           http.MethodGet,
-			path:             "/base/foo/objects/info/packs",
+			u:                &url.URL{Path: "/base/foo/objects/info/packs"},
 			expectedRepoPath: "/base/foo",
 			expectedFilePath: "objects/info/packs",
 		},
 		{
 			description:      "it should match get-loose-object",
 			method:           http.MethodGet,
-			path:             "/base/foo/objects/3b/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacccccc",
+			u:                &url.URL{Path: "/base/foo/objects/3b/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacccccc"},
 			expectedRepoPath: "/base/foo",
 			expectedFilePath: "objects/3b/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacccccc",
 		},
 		{
 			description:      "it should match get-pack-file",
 			method:           http.MethodGet,
-			path:             "/base/foo/objects/pack/pack-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbb.pack",
+			u:                &url.URL{Path: "/base/foo/objects/pack/pack-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbb.pack"},
 			expectedRepoPath: "/base/foo",
 			expectedFilePath: "objects/pack/pack-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbb.pack",
 		},
 		{
 			description:      "it should match get-idx-file",
 			method:           http.MethodGet,
-			path:             "/base/foo/objects/pack/pack-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbb.idx",
+			u:                &url.URL{Path: "/base/foo/objects/pack/pack-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbb.idx"},
 			expectedRepoPath: "/base/foo",
 			expectedFilePath: "objects/pack/pack-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbb.idx",
 		},
@@ -170,7 +173,7 @@ func Test_GitHTTPXfer_MatchRouting_should_match(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Log(tc.description)
-		repoPath, filePath, _, err := ghx.matchRouting(tc.method, tc.path)
+		repoPath, filePath, _, err := ghx.matchRouting(tc.method, tc.u)
 		if err != nil {
 			t.Errorf("error is %s", err.Error())
 			return
