@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"regexp"
 	"strings"
 	"sync"
@@ -266,6 +267,11 @@ func (ghx *GitHTTPXfer) serviceRPC(ctx Context, rpc string) {
 	args := []string{rpc, "--stateless-rpc", "."}
 	cmd := ghx.Git.GitCommand(repoPath, args...)
 	cmd.Env = ctx.Env()
+	defer func(cmd *exec.Cmd) {
+		if err := cleanUpProcessGroup(cmd); err != nil {
+			ghx.logger.Error("clean up process group -> ", err.Error())
+		}
+	}(cmd)
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
