@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"syscall"
 )
 
 func newGit(rootPath string, binPath string, uploadPack bool, receivePack bool) *git {
@@ -59,6 +60,7 @@ func (g *git) UpdateServerInfo(repoPath string) ([]byte, error) {
 func (g *git) GitCommand(repoPath string, args ...string) *exec.Cmd {
 	command := exec.Command(g.binPath, args...)
 	command.Dir = g.GetAbsolutePath(repoPath)
+	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	return command
 }
 
