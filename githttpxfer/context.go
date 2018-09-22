@@ -13,6 +13,8 @@ type (
 		SetRepoPath(repoPath string)
 		FilePath() string
 		SetFilePath(filePath string)
+		Env() []string
+		SetEnv(env []string)
 	}
 
 	context struct {
@@ -20,6 +22,7 @@ type (
 		request  *http.Request
 		repoPath string
 		filePath string
+		env      []string
 	}
 )
 
@@ -58,4 +61,12 @@ func (c *context) FilePath() string {
 
 func (c *context) SetFilePath(filePath string) {
 	c.filePath = filePath
+}
+
+func (c *context) Env() []string {
+	return c.env
+}
+
+func (c *context) SetEnv(env []string) {
+	c.env = env
 }

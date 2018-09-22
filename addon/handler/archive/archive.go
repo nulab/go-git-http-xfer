@@ -47,6 +47,7 @@ func (ghx *gitHTTPXfer) Archive(ctx githttpxfer.Context) {
 
 	args := []string{"archive", "--format=" + format, "--prefix=" + repoName + "-" + tree + "/", tree}
 	cmd := ghx.Git.GitCommand(repoPath, args...)
+	cmd.Env = ctx.Env()
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
