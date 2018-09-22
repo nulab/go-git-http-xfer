@@ -333,8 +333,8 @@ func (ghx *GitHTTPXfer) getInfoRefs(ctx Context) {
 		res.HdrNocache()
 		if err := ghx.sendFile("text/plain; charset=utf-8", ctx); err != nil {
 			RenderNotFound(res.Writer)
-			return
 		}
+		return
 	}
 
 	args := []string{serviceName, "--stateless-rpc", "--advertise-refs", "."}
