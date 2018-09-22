@@ -265,6 +265,7 @@ func (ghx *GitHTTPXfer) serviceRPC(ctx Context, rpc string) {
 
 	args := []string{rpc, "--stateless-rpc", "."}
 	cmd := ghx.Git.GitCommand(repoPath, args...)
+	cmd.Env = ctx.Env()
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -325,7 +326,10 @@ func (ghx *GitHTTPXfer) getInfoRefs(ctx Context) {
 
 	serviceName := getServiceType(req)
 	if !ghx.Git.HasAccess(req, serviceName, false) {
-		ghx.Git.UpdateServerInfo(repoPath)
+		args := []string{"update-server-info"}
+		cmd := ghx.Git.GitCommand(repoPath, args...)
+		cmd.Env = ctx.Env()
+		cmd.Output()
 		res.HdrNocache()
 		if err := ghx.sendFile("text/plain; charset=utf-8", ctx); err != nil {
 			RenderNotFound(res.Writer)
@@ -333,7 +337,10 @@ func (ghx *GitHTTPXfer) getInfoRefs(ctx Context) {
 		}
 	}
 
-	refs, err := ghx.Git.GetInfoRefs(repoPath, serviceName)
+	args := []string{serviceName, "--stateless-rpc", "--advertise-refs", "."}
+	cmd := ghx.Git.GitCommand(repoPath, args...)
+	cmd.Env = ctx.Env()
+	refs, err := cmd.Output()
 	if err != nil {
 		RenderNotFound(ctx.Response().Writer)
 		return

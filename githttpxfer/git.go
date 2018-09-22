@@ -46,16 +46,6 @@ func (g *git) Exists(repoPath string) bool {
 	return true
 }
 
-func (g *git) GetInfoRefs(repoPath, serviceName string) ([]byte, error) {
-	args := []string{serviceName, "--stateless-rpc", "--advertise-refs", "."}
-	return g.GitCommand(repoPath, args...).Output()
-}
-
-func (g *git) UpdateServerInfo(repoPath string) ([]byte, error) {
-	args := []string{"update-server-info"}
-	return g.GitCommand(repoPath, args...).Output()
-}
-
 func (g *git) GitCommand(repoPath string, args ...string) *exec.Cmd {
 	command := exec.Command(g.binPath, args...)
 	command.Dir = g.GetAbsolutePath(repoPath)
