@@ -5,9 +5,6 @@ import (
 	"os/exec"
 	"strings"
 	"syscall"
-
-	"errors"
-	"fmt"
 )
 
 func getServiceType(req *http.Request) string {
@@ -18,17 +15,12 @@ func getServiceType(req *http.Request) string {
 	return strings.Replace(serviceType, "git-", "", 1)
 }
 
-func cleanUpProcessGroup(cmd *exec.Cmd) error {
+func cleanUpProcessGroup(cmd *exec.Cmd) {
 	if cmd == nil {
-		return errors.New("cmd is nil")
+		return
 	}
-	var err error
-	process := cmd.Process
-	if process != nil && process.Pid > 0 {
-		if e := syscall.Kill(-process.Pid, syscall.SIGTERM); e != nil {
-			err = fmt.Errorf(e.Error()+" [pgid %d]", -process.Pid)
-		}
+	if process := cmd.Process; process != nil && process.Pid > 0 {
+		syscall.Kill(-process.Pid, syscall.SIGTERM)
 	}
 	cmd.Wait()
-	return err
 }
