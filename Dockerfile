@@ -1,5 +1,5 @@
 # OFFICIAL REPOSITORY: https://hub.docker.com/_/golang/
-FROM golang:1.10.0
+FROM golang:1.15
 
 MAINTAINER Yuichi Watanabe
 
@@ -8,8 +8,6 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
   && apt-get install -y --no-install-recommends vim curl wget unzip libssl-dev openssl ca-certificates git \
   && rm -fr /var/lib/apt/lists/*
-
-RUN go get github.com/codegangsta/gin
 
 ENV GIT_ROOT_DIR /data/git
 RUN mkdir -p $GIT_ROOT_DIR
