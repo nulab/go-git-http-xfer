@@ -266,7 +266,11 @@ func (ghx *GitHTTPXfer) serviceRPC(ctx Context, rpc string) {
 	args := []string{rpc, "--stateless-rpc", "."}
 	cmd := ghx.Git.GitCommand(repoPath, args...)
 	cmd.Env = ctx.Env()
-	defer cleanUpProcessGroup(cmd)
+	defer cmd.Wait()
+	go func() {
+		<-req.Context().Done()
+		cleanUpProcessGroup(cmd)
+	}()
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
