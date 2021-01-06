@@ -69,6 +69,7 @@ You can add optional parameters to constructor function.
 * `DisableUploadPack` : Disable `git upload-pack` command.
 * `DisableReceivePack`: Disable `git receive-pack` command.
 * `WithoutDumbProto`  : Without `dumb protocol` handling.
+* `WithoutDumbProtoExceptHead`  : Without `dumb protocol` except `head` handling.
 ```go
 	ghx, err := githttpxfer.New(
 		"/data/git",
