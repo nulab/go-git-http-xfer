@@ -89,6 +89,7 @@ type options struct {
 	uploadPack  bool
 	receivePack bool
 	dumbProto   bool
+	head        bool
 }
 
 type Option func(*options)
@@ -108,6 +109,14 @@ func DisableReceivePack() Option {
 func WithoutDumbProto() Option {
 	return func(o *options) {
 		o.dumbProto = false
+		o.head = false
+	}
+}
+
+func WithoutDumbProtoExceptHead() Option {
+	return func(o *options) {
+		o.dumbProto = false
+		o.head = true
 	}
 }
 
@@ -121,7 +130,7 @@ func New(gitRootPath, gitBinPath string, opts ...Option) (*GitHTTPXfer, error) {
 		gitRootPath = cwd
 	}
 
-	ghxOpts := &options{true, true, true}
+	ghxOpts := &options{true, true, true, true}
 
 	for _, opt := range opts {
 		opt(ghxOpts)
@@ -138,7 +147,6 @@ func New(gitRootPath, gitBinPath string, opts ...Option) (*GitHTTPXfer, error) {
 	ghx.Router.Add(NewRoute(http.MethodGet, getInfoRefs, ghx.getInfoRefs))
 
 	if ghxOpts.dumbProto {
-		ghx.Router.Add(NewRoute(http.MethodGet, getHead, ghx.getTextFile))
 		ghx.Router.Add(NewRoute(http.MethodGet, getAlternates, ghx.getTextFile))
 		ghx.Router.Add(NewRoute(http.MethodGet, getHTTPAlternates, ghx.getTextFile))
 		ghx.Router.Add(NewRoute(http.MethodGet, getInfoPacks, ghx.getInfoPacks))
@@ -147,6 +155,11 @@ func New(gitRootPath, gitBinPath string, opts ...Option) (*GitHTTPXfer, error) {
 		ghx.Router.Add(NewRoute(http.MethodGet, getPackFile, ghx.getPackFile))
 		ghx.Router.Add(NewRoute(http.MethodGet, getIdxFile, ghx.getIdxFile))
 	}
+
+	if ghxOpts.head {
+		ghx.Router.Add(NewRoute(http.MethodGet, getHead, ghx.getTextFile))
+	}
+
 	return ghx, nil
 }
 
