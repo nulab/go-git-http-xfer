@@ -1,4 +1,4 @@
-# go-git-http-xfer [![Build Status](https://travis-ci.org/nulab/go-git-http-xfer.svg?branch=master)](https://travis-ci.org/nulab/go-git-http-xfer) [![Coverage Status](https://coveralls.io/repos/github/nulab/go-git-http-xfer/badge.svg?branch=master)](https://coveralls.io/github/nulab/go-git-http-xfer?branch=master)
+# go-git-http-xfer [![Build Status](https://travis-ci.com/nulab/go-git-http-xfer.svg?branch=master)](https://travis-ci.com/nulab/go-git-http-xfer) [![Coverage Status](https://coveralls.io/repos/github/nulab/go-git-http-xfer/badge.svg?branch=master)](https://coveralls.io/github/nulab/go-git-http-xfer?branch=master)
 
 Implements Git HTTP Transport.
 
