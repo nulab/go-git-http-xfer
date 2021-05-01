@@ -10,6 +10,12 @@ import (
 
 func Test_Git_getRequestFileInfo_should_return_RequestFileInfo(t *testing.T) {
 
+	gitBinPath, err := exec.LookPath("git")
+	if err != nil {
+		t.Errorf("git is not found.")
+		return
+	}
+
 	gitRootPath, err := ioutil.TempDir("", "githttpxfer")
 	if err != nil {
 		t.Errorf("Create Temp Dir error: %s", err.Error())
@@ -17,13 +23,13 @@ func Test_Git_getRequestFileInfo_should_return_RequestFileInfo(t *testing.T) {
 	}
 	defer os.RemoveAll(gitRootPath)
 
-	git := newGit(gitRootPath, "/usr/bin/git", true, true)
+	git := newGit(gitRootPath, gitBinPath, true, true)
 
 	repoPath := "foo"
 	filePath := "README.txt"
 
 	absRepoPath := git.GetAbsolutePath(repoPath)
-	os.Mkdir(absRepoPath, os.ModeDir)
+	os.Mkdir(absRepoPath, os.ModeDir|os.ModePerm)
 
 	touchCmd := exec.Command("touch", filePath)
 	touchCmd.Dir = absRepoPath
@@ -40,6 +46,12 @@ func Test_Git_getRequestFileInfo_should_return_RequestFileInfo(t *testing.T) {
 
 func Test_Git_getRequestFileInfo_should_not_return_RequestFileInfo(t *testing.T) {
 
+	gitBinPath, err := exec.LookPath("git")
+	if err != nil {
+		t.Errorf("git is not found.")
+		return
+	}
+
 	gitRootPath, err := ioutil.TempDir("", "githttpxfer")
 	if err != nil {
 		t.Errorf("Create Temp Dir error: %s", err.Error())
@@ -47,7 +59,7 @@ func Test_Git_getRequestFileInfo_should_not_return_RequestFileInfo(t *testing.T)
 	}
 	defer os.RemoveAll(gitRootPath)
 
-	git := newGit(gitRootPath, "/usr/bin/git", true, true)
+	git := newGit(gitRootPath, gitBinPath, true, true)
 
 	repoPath := "foo"
 	filePath := "README.txt"
@@ -60,6 +72,12 @@ func Test_Git_getRequestFileInfo_should_not_return_RequestFileInfo(t *testing.T)
 
 func Test_Git_exists_should_return_true_if_exists_repository(t *testing.T) {
 
+	gitBinPath, err := exec.LookPath("git")
+	if err != nil {
+		t.Errorf("git is not found.")
+		return
+	}
+
 	gitRootPath, err := ioutil.TempDir("", "githttpxfer")
 	if err != nil {
 		t.Errorf("Create Temp Dir error: %s", err.Error())
@@ -67,11 +85,11 @@ func Test_Git_exists_should_return_true_if_exists_repository(t *testing.T) {
 	}
 	defer os.RemoveAll(gitRootPath)
 
-	git := newGit(gitRootPath, "/usr/bin/git", true, true)
+	git := newGit(gitRootPath, gitBinPath, true, true)
 
 	repoPath := "foo"
 
-	os.Mkdir(path.Join(gitRootPath, repoPath), os.ModeDir)
+	os.Mkdir(path.Join(gitRootPath, repoPath), os.ModeDir|os.ModePerm)
 
 	if !git.Exists(repoPath) {
 		t.Errorf("this repository is not exists. path: %s", git.GetAbsolutePath(repoPath))
@@ -81,6 +99,12 @@ func Test_Git_exists_should_return_true_if_exists_repository(t *testing.T) {
 
 func Test_Git_exists_should_return_false_if_not_exists_repository(t *testing.T) {
 
+	gitBinPath, err := exec.LookPath("git")
+	if err != nil {
+		t.Errorf("git is not found.")
+		return
+	}
+
 	gitRootPath, err := ioutil.TempDir("", "githttpxfer")
 	if err != nil {
 		t.Errorf("Create Temp Dir error: %s", err.Error())
@@ -88,7 +112,7 @@ func Test_Git_exists_should_return_false_if_not_exists_repository(t *testing.T) 
 	}
 	defer os.RemoveAll(gitRootPath)
 
-	git := newGit(gitRootPath, "/usr/bin/git", true, true)
+	git := newGit(gitRootPath, gitBinPath, true, true)
 
 	repoPath := "foo"
 
@@ -100,6 +124,12 @@ func Test_Git_exists_should_return_false_if_not_exists_repository(t *testing.T) 
 
 func Test_Git_getAbsolutePath_should_return_absolute_path_of_git_repository(t *testing.T) {
 
+	gitBinPath, err := exec.LookPath("git")
+	if err != nil {
+		t.Errorf("git is not found.")
+		return
+	}
+
 	gitRootPath, err := ioutil.TempDir("", "githttpxfer")
 	if err != nil {
 		t.Errorf("Create Temp Dir error: %s", err.Error())
@@ -107,7 +137,7 @@ func Test_Git_getAbsolutePath_should_return_absolute_path_of_git_repository(t *t
 	}
 	defer os.RemoveAll(gitRootPath)
 
-	git := newGit(gitRootPath, "/usr/bin/git", true, true)
+	git := newGit(gitRootPath, gitBinPath, true, true)
 
 	repoPath := "foo"
 	expectedPath := path.Join(gitRootPath, repoPath)

@@ -45,7 +45,7 @@ func Test_Router_Match_should_match_route(t *testing.T) {
 	if http.MethodPost != route.Method {
 		t.Errorf("http method is not %s . result: %s", http.MethodPost, route.Method)
 	}
-	if "foo" != match.FilePath {
+	if match.FilePath != "foo" {
 		t.Errorf("match is not %s . result: %s", "foo", match.FilePath)
 	}
 }

@@ -1,19 +1,63 @@
 package githttpxfer
 
 import (
-	"log"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"os/exec"
 	"testing"
 )
 
+type TestParams struct {
+	gitRootPath string
+	gitBinPath  string
+	repoName    string
+}
+
+var (
+	testParams *TestParams
+)
+
+func setupTest(t *testing.T) error {
+
+	gitBinPath, err := exec.LookPath("git")
+	if err != nil {
+		t.Log("git is not found. so skip git e2e test.")
+		return err
+	}
+
+	testParams = new(TestParams)
+
+	gitRootPath, err := ioutil.TempDir("", "githttpxfer")
+	if err != nil {
+		t.Logf("get temp directory failed, err: %v", err)
+		return err
+	}
+	os.Chdir(gitRootPath)
+	testParams.gitRootPath = gitRootPath
+	testParams.gitBinPath = gitBinPath
+	testParams.repoName = "test.git"
+	err = os.Mkdir(testParams.repoName, os.ModeDir|os.ModePerm)
+	if err != nil {
+		t.Logf("get temp directory failed, err: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func teardownTest() {
+	os.RemoveAll(testParams.gitRootPath)
+}
+
 func Test_GitHTTPXfer_GitHTTPXferOption(t *testing.T) {
 
-	if _, err := exec.LookPath("git"); err != nil {
-		log.Println("git is not found. so skip test.")
+	if err := setupTest(t); err != nil {
+		return
 	}
+	defer teardownTest()
 
 	tests := []struct {
 		description       string
@@ -36,20 +80,28 @@ func Test_GitHTTPXfer_GitHTTPXferOption(t *testing.T) {
 			expectedCode:      403,
 			gitHTTPXferOption: DisableReceivePack(),
 		},
+		{
+			description:       "it should return 404 if project does not exist",
+			url:               "/unknown.git/git-receive-pack",
+			contentsType:      "application/x-git-receive-pack-request",
+			expectedCode:      404,
+			gitHTTPXferOption: DisableReceivePack(),
+		},
 	}
 
 	for _, tc := range tests {
 
 		t.Log(tc.description)
 
-		ghx, err := New("/data/git", "/usr/bin/git", tc.gitHTTPXferOption)
+		ghx, err := New(testParams.gitRootPath, testParams.gitBinPath, tc.gitHTTPXferOption)
 		if err != nil {
 			t.Errorf("GitHTTPXfer instance could not be created. %s", err.Error())
 		}
 
 		ts := httptest.NewServer(ghx)
 		if ts == nil {
-			t.Error("test server is nil.")
+			t.Log("test server is nil.")
+			t.FailNow()
 		}
 
 		res, err := http.Post(
@@ -70,9 +122,15 @@ func Test_GitHTTPXfer_GitHTTPXferOption(t *testing.T) {
 }
 
 func Test_GitHTTPXfer_MatchRouting_should_not_match(t *testing.T) {
+
+	if err := setupEndToEndTest(t); err != nil {
+		return
+	}
+	defer teardownEndToEndTest()
+
 	t.Log("it should not match if http method is different")
 	var err error
-	ghx, err := New("", "/usr/bin/git")
+	ghx, err := New(testParams.gitRootPath, testParams.gitBinPath)
 	if err != nil {
 		t.Errorf("GitHTTPXfer instance could not be created. %s", err.Error())
 		return
@@ -93,7 +151,13 @@ func Test_GitHTTPXfer_MatchRouting_should_not_match(t *testing.T) {
 }
 
 func Test_GitHTTPXfer_MatchRouting_should_match(t *testing.T) {
-	ghx, err := New("", "/usr/bin/git")
+
+	if err := setupEndToEndTest(t); err != nil {
+		return
+	}
+	defer teardownEndToEndTest()
+
+	ghx, err := New(testParams.gitRootPath, testParams.gitBinPath)
 	if err != nil {
 		t.Errorf("GitHTTPXfer instance could not be created. %s", err.Error())
 		return
