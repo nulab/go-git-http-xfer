@@ -19,6 +19,7 @@ type EndToEndTestParams struct {
 	absRepoPath    string
 	remoteRepoURL  string
 	workingDirPath string // Ex: output destination of git clone.
+	head           string
 	ghx            *GitHTTPXfer
 	ts             *httptest.Server
 }
@@ -29,7 +30,7 @@ var (
 
 func setupEndToEndTest(t *testing.T) error {
 
-	_, err := exec.LookPath("git")
+	gitBinPath, err := exec.LookPath("git")
 	if err != nil {
 		t.Log("git is not found. so skip git e2e test.")
 		return err
@@ -37,9 +38,16 @@ func setupEndToEndTest(t *testing.T) error {
 
 	endToEndTestParams = new(EndToEndTestParams)
 
-	endToEndTestParams.gitRootPath = "/data/git"
-	endToEndTestParams.gitBinPath = "/usr/bin/git"
+	gitRootPath, err := ioutil.TempDir("", "githttpxfer")
+	if err != nil {
+		t.Logf("get temp directory failed, err: %v", err)
+		return err
+	}
+	os.Chdir(gitRootPath)
+	endToEndTestParams.gitRootPath = gitRootPath
+	endToEndTestParams.gitBinPath = gitBinPath
 	endToEndTestParams.repoName = "e2e_test.git"
+	endToEndTestParams.head = "master"
 
 	ghx, err := New(endToEndTestParams.gitRootPath, endToEndTestParams.gitBinPath)
 	if err != nil {
@@ -61,7 +69,7 @@ func setupEndToEndTest(t *testing.T) error {
 	endToEndTestParams.ts = httptest.NewServer(endToEndTestParams.ghx)
 
 	endToEndTestParams.absRepoPath = endToEndTestParams.ghx.Git.GetAbsolutePath(endToEndTestParams.repoName)
-	os.Mkdir(endToEndTestParams.absRepoPath, os.ModeDir)
+	os.Mkdir(endToEndTestParams.absRepoPath, os.ModeDir|os.ModePerm)
 
 	if _, err := execCmd(endToEndTestParams.absRepoPath, "git", "init", "--bare", "--shared"); err != nil {
 		t.Errorf("execute command error: %s", err.Error())
@@ -76,6 +84,7 @@ func setupEndToEndTest(t *testing.T) error {
 
 func teardownEndToEndTest() {
 	endToEndTestParams.ts.Close()
+	os.RemoveAll(endToEndTestParams.gitRootPath)
 }
 
 func execCmd(dir string, name string, arg ...string) ([]byte, error) {
@@ -135,7 +144,18 @@ func Test_End_To_End_it_should_succeed_clone_and_push_and_fetch_and_log(t *testi
 		return
 	}
 
-	if _, err := execCmd(destDirPathA, "git", "push", "-u", "origin", "master"); err != nil {
+	output, err := ioutil.ReadFile(path.Join(destDirPathA, ".git/HEAD"))
+	if err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
+
+	endToEndTestParams.head = strings.Join(strings.Split(strings.TrimSuffix(string(output), "\n"), "/")[2:], "/")
+	if endToEndTestParams.head == "" {
+		t.Error("could not figure out HEAD")
+		return
+	}
+	if _, err := execCmd(destDirPathA, "git", "push", "-u", "origin", endToEndTestParams.head); err != nil {
 		t.Errorf("execute command error: %s", err.Error())
 		return
 	}
@@ -145,7 +165,7 @@ func Test_End_To_End_it_should_succeed_clone_and_push_and_fetch_and_log(t *testi
 		return
 	}
 
-	if _, err := execCmd(destDirPathB, "git", "log", "--oneline", "origin/master", "-1"); err != nil {
+	if _, err := execCmd(destDirPathB, "git", "log", "--oneline", "origin/"+endToEndTestParams.head, "-1"); err != nil {
 		t.Errorf("execute command error: %s", err.Error())
 		return
 	}
@@ -217,6 +237,55 @@ func Test_End_To_End_it_should_succeed_request_to_loose_objects(t *testing.T) {
 	}
 	defer teardownEndToEndTest()
 
+	destDirName := "test"
+	destDirPath := path.Join(endToEndTestParams.workingDirPath, destDirName)
+
+	if _, err := execCmd("", "git", "clone", endToEndTestParams.remoteRepoURL, destDirPath); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
+
+	if _, err := execCmd(destDirPath, "git", "config", "--global", "user.name", "John Smith"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
+
+	if _, err := execCmd(destDirPath, "git", "config", "--global", "user.email", "js@example.com"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
+
+	if _, err := execCmd(destDirPath, "touch", "README.txt"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
+
+	if _, err := execCmd(destDirPath, "git", "add", "README.txt"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
+
+	if _, err := execCmd(destDirPath, "git", "commit", "-m", "first commit"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
+
+	output, err := ioutil.ReadFile(path.Join(destDirPath, ".git/HEAD"))
+	if err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
+
+	endToEndTestParams.head = strings.Join(strings.Split(strings.TrimSuffix(string(output), "\n"), "/")[2:], "/")
+	if endToEndTestParams.head == "" {
+		t.Error("could not figure out HEAD")
+		return
+	}
+	if _, err := execCmd(destDirPath, "git", "push", "-u", "origin", endToEndTestParams.head); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
+
 	res, err := http.Get(endToEndTestParams.remoteRepoURL + "/info/refs")
 	if err != nil {
 		t.Errorf("http.Get: %s", err.Error())
@@ -265,6 +334,55 @@ func Test_End_To_End_it_should_succeed_request_to_get_info_packs(t *testing.T) {
 	}
 	defer teardownEndToEndTest()
 
+	destDirName := "test"
+	destDirPath := path.Join(endToEndTestParams.workingDirPath, destDirName)
+
+	if _, err := execCmd("", "git", "clone", endToEndTestParams.remoteRepoURL, destDirPath); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
+
+	if _, err := execCmd(destDirPath, "git", "config", "--global", "user.name", "John Smith"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
+
+	if _, err := execCmd(destDirPath, "git", "config", "--global", "user.email", "js@example.com"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
+
+	if _, err := execCmd(destDirPath, "touch", "README.txt"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
+
+	if _, err := execCmd(destDirPath, "git", "add", "README.txt"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
+
+	if _, err := execCmd(destDirPath, "git", "commit", "-m", "first commit"); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
+
+	output, err := ioutil.ReadFile(path.Join(destDirPath, ".git/HEAD"))
+	if err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
+
+	endToEndTestParams.head = strings.Join(strings.Split(strings.TrimSuffix(string(output), "\n"), "/")[2:], "/")
+	if endToEndTestParams.head == "" {
+		t.Error("could not figure out HEAD")
+		return
+	}
+	if _, err := execCmd(destDirPath, "git", "push", "-u", "origin", endToEndTestParams.head); err != nil {
+		t.Errorf("execute command error: %s", err.Error())
+		return
+	}
+
 	if _, err := execCmd(endToEndTestParams.absRepoPath, "git", "gc"); err != nil {
 		t.Errorf("execute command error: %s", err.Error())
 		return
@@ -291,7 +409,7 @@ func Test_End_To_End_it_should_succeed_request_to_get_info_packs(t *testing.T) {
 
 	bodyString := string(bodyBytes)
 
-	pattern := regexp.MustCompile("^P\\s(pack-[0-9a-f]{40}\\.pack)")
+	pattern := regexp.MustCompile(`^P\s(pack-[0-9a-f]{40}\.pack)`)
 	m := pattern.FindStringSubmatch(bodyString)
 	if m == nil {
 		t.Error("not match")
@@ -331,5 +449,4 @@ func Test_End_To_End_it_should_succeed_request_to_get_info_packs(t *testing.T) {
 		t.Errorf("StatusCode is not 404. result: %d", res.StatusCode)
 		return
 	}
-
 }
