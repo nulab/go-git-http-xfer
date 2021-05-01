@@ -2,6 +2,7 @@ package archive
 
 import (
 	"io/ioutil"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"os/exec"
@@ -148,6 +149,49 @@ func Test_it_should_download_archive_repository(t *testing.T) {
 		return
 	}
 
+}
+
+func Test_it_should_fail_404_download_archive(t *testing.T) {
+
+	if err := setupArchiveTest(t); err != nil {
+		return
+	}
+	defer teardownArchiveTest()
+
+	ghx, err := githttpxfer.New(archiveParams.gitRootPath, archiveParams.gitBinPath)
+	if err != nil {
+		t.Errorf("An instance could not be created. %s", err.Error())
+		return
+	}
+
+	ghx.Router.Add(githttpxfer.NewRoute(
+		Method,
+		Pattern,
+		New(ghx).Archive,
+	))
+
+	ts := httptest.NewServer(ghx)
+	if ts == nil {
+		t.Log("test server is nil.")
+		t.FailNow()
+	}
+	defer ts.Close()
+
+	repoName := "archive_test.git"
+	remoteRepoUrl := ts.URL + "/" + repoName
+
+	client := ts.Client()
+	request, _ := http.NewRequest(http.MethodGet, remoteRepoUrl, nil)
+	response, err := client.Do(request)
+	if err != nil {
+		t.Errorf("Should not return %v", err)
+	}
+	if response.StatusCode != http.StatusNotFound {
+		t.Errorf(
+			"Status Code should be 404, current: %d",
+			response.StatusCode,
+		)
+	}
 }
 
 func execCmd(dir string, name string, arg ...string) ([]byte, error) {

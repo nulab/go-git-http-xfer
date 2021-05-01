@@ -80,6 +80,13 @@ func Test_GitHTTPXfer_GitHTTPXferOption(t *testing.T) {
 			expectedCode:      403,
 			gitHTTPXferOption: DisableReceivePack(),
 		},
+		{
+			description:       "it should return 404 if project does not exist",
+			url:               "/unknown.git/git-receive-pack",
+			contentsType:      "application/x-git-receive-pack-request",
+			expectedCode:      404,
+			gitHTTPXferOption: DisableReceivePack(),
+		},
 	}
 
 	for _, tc := range tests {
