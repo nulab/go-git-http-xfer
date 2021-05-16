@@ -277,8 +277,13 @@ func (ghx *GitHTTPXfer) serviceRPC(ctx Context, rpc string) {
 	defer body.Close()
 
 	args := []string{rpc, "--stateless-rpc", "."}
+	env := ctx.Env()
+	version := req.Header.Get("Git-Protocol")
+	if version != "" {
+		env = append(env, fmt.Sprintf("GIT_PROTOCOL=%s", version))
+	}
 	cmd := ghx.Git.GitCommand(repoPath, args...)
-	cmd.Env = ctx.Env()
+	cmd.Env = env
 	defer cmd.Wait()
 	go func() {
 		<-req.Context().Done()
@@ -357,9 +362,15 @@ func (ghx *GitHTTPXfer) getInfoRefs(ctx Context) {
 	}
 
 	args := []string{serviceName, "--stateless-rpc", "--advertise-refs", "."}
+	env := ctx.Env()
+	version := req.Header.Get("Git-Protocol")
+	if version != "" {
+		env = append(env, fmt.Sprintf("GIT_PROTOCOL=%s", version))
+	}
 	cmd := ghx.Git.GitCommand(repoPath, args...)
-	cmd.Env = ctx.Env()
+	cmd.Env = env
 	refs, err := cmd.Output()
+
 	if err != nil {
 		RenderNotFound(ctx.Response().Writer)
 		return
