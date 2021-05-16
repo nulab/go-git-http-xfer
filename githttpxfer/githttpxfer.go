@@ -324,6 +324,7 @@ func (ghx *GitHTTPXfer) serviceRPC(ctx Context, rpc string) {
 	// so must close it after completing the copy request body to standard input.
 	stdin.Close()
 
+	res.HdrNocache()
 	res.SetContentType(fmt.Sprintf("application/x-git-%s-result", rpc))
 	res.WriteHeader(http.StatusOK)
 
