@@ -9,7 +9,6 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"sync"
 )
 
 var (
@@ -315,13 +314,9 @@ func (ghx *GitHTTPXfer) serviceRPC(ctx Context, rpc string) {
 		RenderInternalServerError(res.Writer)
 		return
 	}
-	bufIn := bufPool.Get().([]byte)
-	defer bufPool.Put(bufIn)
-	bufOut := bufPool.Get().([]byte)
-	defer bufPool.Put(bufOut)
 
 	go func() {
-		if _, err := io.CopyBuffer(stdin, body, bufIn); err != nil {
+		if _, err := io.Copy(stdin, body); err != nil {
 			ghx.logger.Error("failed to write the request body to standard input. ", err.Error())
 			RenderInternalServerError(res.Writer)
 			return
@@ -332,8 +327,7 @@ func (ghx *GitHTTPXfer) serviceRPC(ctx Context, rpc string) {
 	}()
 
 	go func() {
-
-		if _, err := io.CopyBuffer(res.Writer, stdout, bufOut); err != nil {
+		if _, err := io.Copy(res.Writer, stdout); err != nil {
 			ghx.logger.Error("failed to write the standard output to response. ", err.Error())
 			return
 		}
@@ -342,12 +336,6 @@ func (ghx *GitHTTPXfer) serviceRPC(ctx Context, rpc string) {
 	if err = cmd.Wait(); err != nil {
 		ghx.logger.Error("specified command fails to run or doesn't complete successfully. ", err.Error())
 	}
-}
-
-var bufPool = sync.Pool{
-	New: func() interface{} {
-		return make([]byte, 32*1024)
-	},
 }
 
 func (ghx *GitHTTPXfer) getInfoRefs(ctx Context) {
