@@ -276,6 +276,9 @@ func (ghx *GitHTTPXfer) serviceRPC(ctx Context, rpc string) {
 	}
 	defer body.Close()
 
+	res.HdrNocache()
+	res.SetContentType(fmt.Sprintf("application/x-git-%s-result", rpc))
+
 	args := []string{rpc, "--stateless-rpc", "."}
 	env := ctx.Env()
 	version := req.Header.Get("Git-Protocol")
@@ -312,28 +315,29 @@ func (ghx *GitHTTPXfer) serviceRPC(ctx Context, rpc string) {
 		RenderInternalServerError(res.Writer)
 		return
 	}
-
 	bufIn := bufPool.Get().([]byte)
 	defer bufPool.Put(bufIn)
-	if _, err := io.CopyBuffer(stdin, body, bufIn); err != nil {
-		ghx.logger.Error("failed to write the request body to standard input. ", err.Error())
-		RenderInternalServerError(res.Writer)
-		return
-	}
-	// "git-upload-pack" waits for the remaining input and it hangs,
-	// so must close it after completing the copy request body to standard input.
-	stdin.Close()
-
-	res.HdrNocache()
-	res.SetContentType(fmt.Sprintf("application/x-git-%s-result", rpc))
-	res.WriteHeader(http.StatusOK)
-
 	bufOut := bufPool.Get().([]byte)
 	defer bufPool.Put(bufOut)
-	if _, err := io.CopyBuffer(res.Writer, stdout, bufOut); err != nil {
-		ghx.logger.Error("failed to write the standard output to response. ", err.Error())
-		return
-	}
+
+	go func() {
+		if _, err := io.CopyBuffer(stdin, body, bufIn); err != nil {
+			ghx.logger.Error("failed to write the request body to standard input. ", err.Error())
+			RenderInternalServerError(res.Writer)
+			return
+		}
+		// "git-upload-pack" waits for the remaining input and it hangs,
+		// so must close it after completing the copy request body to standard input.
+		stdin.Close()
+	}()
+
+	go func() {
+
+		if _, err := io.CopyBuffer(res.Writer, stdout, bufOut); err != nil {
+			ghx.logger.Error("failed to write the standard output to response. ", err.Error())
+			return
+		}
+	}()
 
 	if err = cmd.Wait(); err != nil {
 		ghx.logger.Error("specified command fails to run or doesn't complete successfully. ", err.Error())
