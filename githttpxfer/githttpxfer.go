@@ -292,21 +292,8 @@ func (ghx *GitHTTPXfer) serviceRPC(ctx Context, rpc string) {
 		cleanUpProcessGroup(cmd)
 	}()
 
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		ghx.logger.Error("failed to get pipe that will be connected to the command's standard input. ", err.Error())
-		RenderInternalServerError(res.Writer)
-		return
-	}
-	defer stdin.Close()
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		ghx.logger.Error("failed to get pipe that will be connected to the command's standard output. ", err.Error())
-		RenderInternalServerError(res.Writer)
-		return
-	}
-	defer stdout.Close()
+	cmd.Stdin = body
+	cmd.Stdout = res.Writer
 
 	err = cmd.Start()
 	if err != nil {
@@ -314,24 +301,6 @@ func (ghx *GitHTTPXfer) serviceRPC(ctx Context, rpc string) {
 		RenderInternalServerError(res.Writer)
 		return
 	}
-
-	go func() {
-		if _, err := io.Copy(stdin, body); err != nil {
-			ghx.logger.Error("failed to write the request body to standard input. ", err.Error())
-			RenderInternalServerError(res.Writer)
-			return
-		}
-		// "git-upload-pack" waits for the remaining input and it hangs,
-		// so must close it after completing the copy request body to standard input.
-		stdin.Close()
-	}()
-
-	go func() {
-		if _, err := io.Copy(res.Writer, stdout); err != nil {
-			ghx.logger.Error("failed to write the standard output to response. ", err.Error())
-			return
-		}
-	}()
 
 	if err = cmd.Wait(); err != nil {
 		ghx.logger.Error("specified command fails to run or doesn't complete successfully. ", err.Error())
