@@ -222,9 +222,11 @@ func newEvent() *event {
 type EventKey string
 
 const (
-	BeforeUploadPack  EventKey = "before-upload-pack"
-	BeforeReceivePack EventKey = "before-receive-pack"
-	AfterMatchRouting EventKey = "after-match-routing"
+	BeforeUploadPack   EventKey = "before-upload-pack"
+	BeforeReceivePack  EventKey = "before-receive-pack"
+	SuccessUploadPack  EventKey = "success-upload-pack"
+	SuccessReceivePack EventKey = "success-receive-pack"
+	AfterMatchRouting  EventKey = "after-match-routing"
 )
 
 type event struct {
@@ -331,7 +333,17 @@ func (ghx *GitHTTPXfer) serviceRPC(ctx Context, rpc string) {
 
 	if err = cmd.Wait(); err != nil {
 		ghx.logger.Error("specified command fails to run or doesn't complete successfully. ", err.Error())
+		return
 	}
+
+	var event EventKey
+	switch rpc {
+	case uploadPack:
+		event = SuccessUploadPack
+	case receivePack:
+		event = SuccessReceivePack
+	}
+	ghx.Event.emit(event, ctx)
 }
 
 var bufPool = sync.Pool{
